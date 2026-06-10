@@ -3,4 +3,8 @@ node_modules
 .env
 .env.local
 .vercel
+<<<<<<< HEAD
 .DS_Store
+=======
+.DS_Store
+>>>>>>> 39ebaf3b0006d7c75e9f8a9e1c2b0f13804cdc56
