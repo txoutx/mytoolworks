@@ -116,10 +116,7 @@ export function ToolCard({
 
 function getAccent(tool: Tool) {
   if (tool.categorySlug === "pdf") return pdfAccentByGroup[tool.group] ?? "coral";
-  if (tool.categorySlug === "calculadora") return "blue";
-  if (tool.categorySlug === "conversor") return "green";
-  if (tool.categorySlug === "cv") return "purple";
-  if (tool.categorySlug === "cartas") return "coral";
+  if (tool.categorySlug === "img") return "blue";
   return "yellow";
 }
 

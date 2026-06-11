@@ -11,6 +11,7 @@ export function Header() {
         </Link>
         <div className="nav-links">
           <Link href="/pdf">PDF</Link>
+          <Link href="/img">Imagen</Link>
         </div>
       </nav>
     </header>
@@ -22,7 +23,7 @@ export function Footer() {
     <footer className="footer">
       <div className="container footer-inner">
         <span>MyToolWorks.com</span>
-        <span>Herramientas PDF online rapidas y limpias.</span>
+        <span>Herramientas online rapidas y limpias.</span>
         <nav className="footer-links" aria-label="Enlaces legales">
           <Link href="/politica-privacidad">Privacidad</Link>
           <Link href="/cookies">Cookies</Link>

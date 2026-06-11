@@ -1,4 +1,4 @@
-export type ToolCategorySlug = "pdf";
+export type ToolCategorySlug = "pdf" | "img";
 
 export type ToolKind =
   | "pdf"
@@ -48,6 +48,13 @@ export const categories: ToolCategory[] = [
     shortTitle: "PDF",
     navLabel: "PDF",
     description: "Unir, dividir, comprimir, rotar, ordenar, convertir y firmar PDF."
+  },
+  {
+    slug: "img",
+    title: "Herramientas de imagen",
+    shortTitle: "Imagen",
+    navLabel: "Imagen",
+    description: "Edita, comprime, convierte, redimensiona y descarga imagenes desde el navegador."
   }
 ];
 
