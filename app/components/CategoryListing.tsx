@@ -54,7 +54,7 @@ export function CategoryListing({ slug, title, description }: CategoryListingPro
                 </div>
                 <div className="tool-grid compact-grid">
                   {group.tools.map((tool) => (
-                    <ToolCard tool={tool} compact key={tool.slug} />
+                    <ToolCard tool={tool} variant="showcase" key={tool.slug} />
                   ))}
                 </div>
               </section>
