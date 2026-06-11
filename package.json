@@ -5,12 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postinstall": "python -m pip install -r requirements.txt -t .python_packages",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
     "docx": "^9.7.1",
-    "groupdocs-conversion-cloud": "^26.4.0",
     "jszip": "^3.10.1",
     "lucide-react": "^0.468.0",
     "next": "^15.3.4",

@@ -1,20 +1,14 @@
 import { NextResponse } from "next/server";
-import conversionCloud from "groupdocs-conversion-cloud";
+import { randomUUID } from "crypto";
+import { mkdir, readFile, rm, writeFile } from "fs/promises";
+import { tmpdir } from "os";
+import path from "path";
+import { spawn } from "child_process";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const clientId = process.env.GROUPDOCS_CLIENT_ID;
-const clientSecret = process.env.GROUPDOCS_CLIENT_SECRET;
-
 export async function POST(request: Request) {
-  if (!clientId || !clientSecret) {
-    return new NextResponse(
-      "PDF a Word real necesita configurar GROUPDOCS_CLIENT_ID y GROUPDOCS_CLIENT_SECRET en Vercel.",
-      { status: 501 }
-    );
-  }
-
   const formData = await request.formData();
   const file = formData.get("file");
 
@@ -26,16 +20,16 @@ export async function POST(request: Request) {
     return new NextResponse("El archivo debe ser PDF.", { status: 400 });
   }
 
-  try {
-    const config = new conversionCloud.Configuration(clientId, clientSecret);
-    config.apiBaseUrl = "https://api.groupdocs.cloud";
-    const convertApi = conversionCloud.ConvertApi.fromConfig(config);
-    const input = Buffer.from(await file.arrayBuffer());
-    const result = await convertApi.convertDocumentDirect(
-      new conversionCloud.ConvertDocumentDirectRequest("docx", input)
-    );
-    const body = result.buffer.slice(result.byteOffset, result.byteOffset + result.byteLength) as ArrayBuffer;
+  const jobDir = path.join(tmpdir(), `mytoolworks-pdf-word-${randomUUID()}`);
+  const inputPath = path.join(jobDir, "input.pdf");
+  const outputPath = path.join(jobDir, "output.docx");
 
+  try {
+    await mkdir(jobDir, { recursive: true });
+    await writeFile(inputPath, Buffer.from(await file.arrayBuffer()));
+    await runPythonConverter(inputPath, outputPath);
+    const output = await readFile(outputPath);
+    const body = output.buffer.slice(output.byteOffset, output.byteOffset + output.byteLength) as ArrayBuffer;
     return new NextResponse(body, {
       headers: {
         "content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -44,8 +38,47 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error desconocido";
-    return new NextResponse(`No se pudo convertir el PDF a Word real. ${message}`, { status: 502 });
+    return new NextResponse(`No se pudo convertir el PDF a Word. ${message}`, { status: 500 });
+  } finally {
+    await rm(jobDir, { recursive: true, force: true });
   }
+}
+
+function runPythonConverter(inputPath: string, outputPath: string) {
+  return new Promise<void>((resolve, reject) => {
+    const scriptPath = path.join(process.cwd(), "scripts", "pdf_to_docx.py");
+    const pythonPackagesPath = path.join(process.cwd(), ".python_packages");
+    const pythonCommand = process.env.PYTHON_BIN ?? (process.platform === "win32" ? "python" : "python3");
+    const child = spawn(pythonCommand, [scriptPath, inputPath, outputPath], {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        PYTHONPATH: [pythonPackagesPath, process.env.PYTHONPATH].filter(Boolean).join(path.delimiter)
+      },
+      windowsHide: true
+    });
+    let stderr = "";
+
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on("error", (error) => {
+      reject(new Error(`No se pudo arrancar Python. ${error.message}`));
+    });
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+
+      reject(
+        new Error(
+          stderr.trim() ||
+            "El servidor no tiene instalado pdf2docx. Instala las dependencias de requirements.txt en el entorno de despliegue."
+        )
+      );
+    });
+  });
 }
 
 function safeFilename(name: string) {

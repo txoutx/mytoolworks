@@ -1,4 +1,5 @@
 node_modules
+.python_packages
 .next
 .env
 .env.local
