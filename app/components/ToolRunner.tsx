@@ -23,6 +23,7 @@ type PlacedSignature = {
   pageId: string;
   xPct: number;
   yPct: number;
+  scale: number;
 };
 
 const formatEuro = new Intl.NumberFormat("es-ES", {
@@ -114,7 +115,7 @@ function PdfUploader({ tool }: { tool: Tool }) {
         const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
         for (let pageIndex = 0; pageIndex < pdf.numPages; pageIndex += 1) {
           const page = await pdf.getPage(pageIndex + 1);
-          const viewport = page.getViewport({ scale: 0.34 });
+          const viewport = page.getViewport({ scale: tool.slug === "firmar-pdf" ? 1 : 0.34 });
           const canvas = document.createElement("canvas");
           const context = canvas.getContext("2d");
           if (!context) continue;
@@ -308,7 +309,8 @@ function PdfUploader({ tool }: { tool: Tool }) {
         dataUrl: signaturePreview,
         pageId: targetPage,
         xPct: 0.5,
-        yPct: 0.78
+        yPct: 0.78,
+        scale: 1
       }
     ]);
   }
@@ -320,7 +322,19 @@ function PdfUploader({ tool }: { tool: Tool }) {
     );
   }
 
-  const pageCardTools = ["dividir-pdf", "ordenar-pdf", "rotar-pdf", "firmar-pdf", "pdf-a-jpg"];
+  function resizeSignature(id: string, delta: number) {
+    setPlacedSignatures((current) =>
+      current.map((signature) =>
+        signature.id === id ? { ...signature, scale: Math.min(2.2, Math.max(0.45, signature.scale + delta)) } : signature
+      )
+    );
+  }
+
+  function removeSignature(id: string) {
+    setPlacedSignatures((current) => current.filter((signature) => signature.id !== id));
+  }
+
+  const pageCardTools = ["dividir-pdf", "ordenar-pdf", "rotar-pdf", "pdf-a-jpg"];
   const showFirstPageCards = previews.length > 0 && !["unir-pdf", ...pageCardTools].includes(tool.slug);
 
   return (
@@ -435,6 +449,125 @@ function PdfUploader({ tool }: { tool: Tool }) {
               </div>
             </article>
           ))}
+        </div>
+      )}
+
+      {tool.slug === "firmar-pdf" && pagePreviews.length > 0 && (
+        <div className="signature-editor">
+          <aside className="signature-thumbs" aria-label="Paginas del PDF">
+            {pagePreviews.map((page) => (
+              <button
+                type="button"
+                className={selectedPages[0] === page.id ? "signature-thumb active" : "signature-thumb"}
+                onClick={() => setSelectedPages([page.id])}
+                key={page.id}
+              >
+                <img src={page.thumbnail} alt={`Pagina ${page.pageNumber}`} />
+                <span>{page.pageNumber}</span>
+              </button>
+            ))}
+          </aside>
+
+          <div className="signature-pages" aria-label="Editor de PDF">
+            {pagePreviews.map((page) => (
+              <section
+                className="signature-page"
+                onClick={() => setSelectedPages([page.id])}
+                onPointerMove={(event) => {
+                  if (draggingSignatureId) moveSignature(event, page.id, draggingSignatureId);
+                }}
+                onPointerUp={() => setDraggingSignatureId(null)}
+                key={page.id}
+              >
+                <div className="signature-page-number">Pagina {page.pageNumber}</div>
+                <div className="document-thumb signature-page-paper">
+                  <img src={page.thumbnail} alt={`Pagina ${page.pageNumber}`} />
+                  {placedSignatures
+                    .filter((signature) => signature.pageId === page.id)
+                    .map((signature) => (
+                      <span
+                        className="signature-marker signature-image-marker"
+                        style={{
+                          left: `${signature.xPct * 100}%`,
+                          top: `${signature.yPct * 100}%`,
+                          width: `${120 * signature.scale}px`,
+                          height: `${44 * signature.scale}px`
+                        }}
+                        onPointerDown={(event) => {
+                          event.stopPropagation();
+                          setDraggingSignatureId(signature.id);
+                        }}
+                        key={signature.id}
+                      >
+                        <img src={signature.dataUrl} alt="Firma" />
+                        <button
+                          type="button"
+                          className="signature-remove"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            removeSignature(signature.id);
+                          }}
+                          aria-label="Quitar firma"
+                        >
+                          x
+                        </button>
+                      </span>
+                    ))}
+                </div>
+              </section>
+            ))}
+          </div>
+
+          <aside className="signature-sidebar">
+            <h3>Opciones de firma</h3>
+            <div className="signature-type-card active">
+              <span className="signature-type-icon">Firma</span>
+              <strong>Firma simple</strong>
+            </div>
+            <div className="signature-pad-wrap">
+              <label>Dibuja una firma</label>
+              <canvas
+                ref={signatureCanvasRef}
+                width={520}
+                height={180}
+                className="signature-pad"
+                onPointerDown={startSignature}
+                onPointerMove={drawSignature}
+                onPointerUp={finishSignature}
+                onPointerLeave={finishSignature}
+              />
+              <div className="signature-actions">
+                <button type="button" className="small-action primary-small" onClick={addSignatureToPdf} disabled={!signaturePreview}>
+                  Anadir firma
+                </button>
+                <button type="button" className="small-action" onClick={clearSignature}>
+                  Borrar dibujo
+                </button>
+              </div>
+            </div>
+            <div className="signature-list">
+              <h4>Firmas colocadas</h4>
+              {placedSignatures.length === 0 ? (
+                <p>Cuando anadas una firma aparecera aqui.</p>
+              ) : (
+                placedSignatures.map((signature, index) => (
+                  <div className="signature-list-item" key={signature.id}>
+                    <img src={signature.dataUrl} alt={`Firma ${index + 1}`} />
+                    <span>Firma {index + 1}</span>
+                    <button type="button" onClick={() => resizeSignature(signature.id, -0.15)} aria-label="Reducir firma">
+                      -
+                    </button>
+                    <button type="button" onClick={() => resizeSignature(signature.id, 0.15)} aria-label="Ampliar firma">
+                      +
+                    </button>
+                    <button type="button" onClick={() => removeSignature(signature.id)} aria-label="Quitar firma">
+                      Quitar
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </aside>
         </div>
       )}
 
@@ -632,34 +765,6 @@ function PdfUploader({ tool }: { tool: Tool }) {
           <NumberField label="Pagina" value={editPage} onChange={setEditPage} />
           <NumberField label="Posicion X" value={editX} onChange={setEditX} />
           <NumberField label="Posicion Y desde arriba" value={editY} onChange={setEditY} />
-        </div>
-      )}
-      {tool.slug === "firmar-pdf" && (
-        <div className="tool-options">
-          <div className="signature-pad-wrap">
-            <label>Dibuja una firma</label>
-            <canvas
-              ref={signatureCanvasRef}
-              width={520}
-              height={180}
-              className="signature-pad"
-              onPointerDown={startSignature}
-              onPointerMove={drawSignature}
-              onPointerUp={finishSignature}
-              onPointerLeave={finishSignature}
-            />
-            <div className="signature-actions">
-              <button type="button" className="small-action" onClick={addSignatureToPdf} disabled={!signaturePreview || pagePreviews.length === 0}>
-                Anadir firma
-              </button>
-              <button type="button" className="small-action" onClick={clearSignature}>
-                Borrar dibujo
-              </button>
-            </div>
-          </div>
-          <p className="option-note">
-            Anade una o varias firmas y arrastralas sobre cualquier pagina. Para crear otra firma distinta, borra el dibujo y dibuja una nueva.
-          </p>
         </div>
       )}
       {tool.slug === "rotar-pdf" && (
@@ -1221,8 +1326,8 @@ async function processPdfTool(
       const selectedPageIndex = Number(signature.pageId.split("-")[1]);
       const page = pages[Math.min(Math.max(selectedPageIndex, 0), pages.length - 1)];
       const { width, height } = page.getSize();
-      const signatureWidth = Math.min(220, width - 112);
-      const signatureHeight = 76;
+      const signatureWidth = Math.min(220 * signature.scale, width - 112);
+      const signatureHeight = 76 * signature.scale;
       page.drawImage(signatureImage, {
         x: Math.min(Math.max(signature.xPct * width - signatureWidth / 2, 16), width - signatureWidth - 16),
         y: Math.min(Math.max(height - signature.yPct * height - signatureHeight / 2, 16), height - signatureHeight - 16),
