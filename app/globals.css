@@ -1476,6 +1476,17 @@ h1 {
   max-height: 620px;
   border-radius: 8px;
   box-shadow: 0 10px 28px rgba(23, 32, 38, 0.16);
+  cursor: grab;
+  touch-action: none;
+}
+
+.image-preview-canvas-wrap canvas:active {
+  cursor: grabbing;
+}
+
+.image-editor-note {
+  margin-top: 12px;
+  text-align: center;
 }
 
 .calculator-shell {

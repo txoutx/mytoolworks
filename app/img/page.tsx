@@ -50,8 +50,8 @@ export default function ImagePage() {
             <div className="article tool-seo-content">
               <h2>Que puedes hacer</h2>
               <p>
-                Puedes cambiar el tamano de una imagen, convertirla a JPG, PNG o WebP, reducir su peso, recortarla,
-                rotarla, voltearla y anadir una marca de agua de texto.
+                Puedes cambiar el lienzo final, mover la imagen dentro, escalarla, convertirla a JPG, PNG, WebP o AVIF,
+                reducir su peso, rotarla, voltearla y anadir una marca de agua de texto.
               </p>
               <h2>Ventajas de trabajar en el navegador</h2>
               <p>
