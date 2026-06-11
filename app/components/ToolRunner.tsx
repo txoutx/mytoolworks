@@ -498,11 +498,33 @@ function PdfUploader({ tool }: { tool: Tool }) {
                           setDraggingSignatureId(signature.id);
                         }}
                         key={signature.id}
-                      >
-                        <img src={signature.dataUrl} alt="Firma" />
-                        <button
-                          type="button"
-                          className="signature-remove"
+                        >
+                          <img src={signature.dataUrl} alt="Firma" />
+                          <div className="signature-inline-controls" onPointerDown={(event) => event.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                resizeSignature(signature.id, -0.15);
+                              }}
+                              aria-label="Reducir firma"
+                            >
+                              -
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                resizeSignature(signature.id, 0.15);
+                              }}
+                              aria-label="Ampliar firma"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            className="signature-remove"
                           onClick={(event) => {
                             event.stopPropagation();
                             removeSignature(signature.id);

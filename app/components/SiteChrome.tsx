@@ -1,11 +1,12 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export function Header() {
   return (
     <header className="site-header">
       <nav className="container nav" aria-label="Navegacion principal">
         <Link href="/" className="brand" aria-label="MyToolWorks inicio">
-          <span className="brand-mark">M</span>
+          <Image src="/icono.png" alt="" width={34} height={34} className="brand-logo" priority />
           <span>MyToolWorks</span>
         </Link>
         <div className="nav-links">

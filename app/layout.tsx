@@ -10,6 +10,10 @@ export const metadata: Metadata = {
   description:
     "Herramientas online rapidas para PDF, calculadoras, conversores, textos, CV y documentos.",
   applicationName: "MyToolWorks",
+  icons: {
+    icon: "/icono.png",
+    apple: "/icono.png"
+  },
   alternates: {
     canonical: "/"
   },
