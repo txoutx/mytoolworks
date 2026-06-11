@@ -1234,7 +1234,8 @@ async function processPdfTool(
   const { PDFDocument, StandardFonts, rgb, degrees } = await import("pdf-lib");
 
   if (tool.slug === "pdf-a-word") {
-    return "PDF a Word editable manteniendo formato real requiere backend especializado. He quitado la conversion falsa por imagen.";
+    await createEditableWordFromPdf(files[0]);
+    return "Word creado y descargado con vista fiel y texto editable.";
   }
 
   if (tool.slug === "pdf-a-powerpoint") {
@@ -1562,6 +1563,87 @@ async function createVisualWordFromPdf(file: File) {
   downloadBlob(await Packer.toBlob(doc), "pdf-a-word.docx");
 }
 
+async function createEditableWordFromPdf(file: File) {
+  const pdfjs = await loadPdfJs();
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const pages: string[] = [];
+
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 1 });
+    const imageViewport = page.getViewport({ scale: 1.65 });
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) continue;
+    canvas.width = Math.floor(imageViewport.width);
+    canvas.height = Math.floor(imageViewport.height);
+    await page.render({ canvas, canvasContext: context, viewport: imageViewport }).promise;
+    const image = canvas.toDataURL("image/jpeg", 0.9);
+    const textContent = await page.getTextContent();
+    const textLayer = textContent.items
+      .map((item: any) => {
+        const value = String(item.str ?? "").replace(/\s+/g, " ");
+        if (!value.trim() || !Array.isArray(item.transform)) return "";
+        const transformed = pdfjs.Util.transform(viewport.transform, item.transform);
+        const x = Math.max(0, transformed[4]);
+        const y = Math.max(0, transformed[5]);
+        const fontSize = Math.max(7, Math.abs(transformed[3]) * 0.82);
+        const width = Math.max(fontSize * value.length * 0.45, Number(item.width ?? 0));
+
+        return `<span class="pdf-text" style="left:${x.toFixed(2)}pt;top:${Math.max(0, y - fontSize).toFixed(
+          2
+        )}pt;width:${width.toFixed(2)}pt;font-size:${fontSize.toFixed(2)}pt;">${htmlEscape(value)}</span>`;
+      })
+      .join("");
+
+    pages.push(`
+      <section class="pdf-page" style="width:${viewport.width.toFixed(2)}pt;height:${viewport.height.toFixed(2)}pt;">
+        <img class="pdf-bg" src="${image}" alt="">
+        ${textLayer}
+      </section>
+    `);
+  }
+
+  const html = `<!doctype html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+<head>
+  <meta charset="utf-8">
+  <meta name="ProgId" content="Word.Document">
+  <meta name="Generator" content="MyToolWorks">
+  <style>
+    body { margin: 0; background: #fff; }
+    .pdf-page {
+      position: relative;
+      margin: 0 auto;
+      page-break-after: always;
+      overflow: hidden;
+      background: #fff;
+    }
+    .pdf-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+    .pdf-text {
+      position: absolute;
+      z-index: 1;
+      display: block;
+      min-height: 1em;
+      color: #111;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1;
+      white-space: pre;
+    }
+  </style>
+</head>
+<body>${pages.join("")}</body>
+</html>`;
+
+  downloadBlob(new Blob([html], { type: "application/msword;charset=utf-8" }), "pdf-a-word.doc");
+}
+
 function fitImage(width: number, height: number, maxWidth: number, maxHeight: number) {
   const ratio = Math.min(maxWidth / width, maxHeight / height);
   return { width: Math.round(width * ratio), height: Math.round(height * ratio) };
@@ -1663,6 +1745,15 @@ function xmlEscape(value: string) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&apos;");
+}
+
+function htmlEscape(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 function officeRel(type: string) {

@@ -11,7 +11,6 @@ export function Header() {
         </Link>
         <div className="nav-links">
           <Link href="/pdf">PDF</Link>
-          <Link href="/contacto">Contacto</Link>
         </div>
       </nav>
     </header>
