@@ -37,7 +37,7 @@ export type Tool = {
   kind: ToolKind;
   processing: ProcessingMode;
   input: "single-file" | "multi-file" | "office-file" | "html";
-  output: "pdf" | "docx" | "pptx" | "xlsx" | "jpg" | "text" | "calculation";
+  output: "pdf" | "jpg" | "text" | "calculation";
   adProfile: AdProfile;
 };
 
@@ -127,51 +127,6 @@ export const tools: Tool[] = [
     processing: "client",
     input: "single-file",
     output: "pdf"
-  },
-  {
-    ...pdfBase,
-    slug: "pdf-a-word",
-    legacySlug: "pdf-word",
-    route: "/pdf/pdf-a-word",
-    title: "PDF a Word",
-    h1: "Convertir PDF a Word",
-    group: "Convertir",
-    description: "Convierte PDF a DOCX editable manteniendo formato, imagenes y estructura mediante backend real.",
-    keywords: ["pdf a word", "pdf a docx"],
-    status: "Disponible",
-    processing: "backend-required",
-    input: "single-file",
-    output: "docx"
-  },
-  {
-    ...pdfBase,
-    slug: "pdf-a-powerpoint",
-    legacySlug: "pdf-powerpoint",
-    route: "/pdf/pdf-a-powerpoint",
-    title: "PDF a PowerPoint",
-    h1: "Convertir PDF a PowerPoint",
-    group: "Convertir",
-    description: "Convierte a PPTX editable manteniendo formato. Requiere backend especializado.",
-    keywords: ["pdf a powerpoint", "pdf a pptx"],
-    status: "Requiere backend",
-    processing: "backend-required",
-    input: "single-file",
-    output: "pptx"
-  },
-  {
-    ...pdfBase,
-    slug: "pdf-a-excel",
-    legacySlug: "pdf-excel",
-    route: "/pdf/pdf-a-excel",
-    title: "PDF a Excel",
-    h1: "Convertir PDF a Excel",
-    group: "Convertir",
-    description: "Extrae tablas editables manteniendo estructura. Requiere backend especializado.",
-    keywords: ["pdf a excel", "pdf a xlsx"],
-    status: "Requiere backend",
-    processing: "backend-required",
-    input: "single-file",
-    output: "xlsx"
   },
   {
     ...pdfBase,

@@ -1233,19 +1233,6 @@ async function processPdfTool(
 ) {
   const { PDFDocument, StandardFonts, rgb, degrees } = await import("pdf-lib");
 
-  if (tool.slug === "pdf-a-word") {
-    await convertPdfToWord(files[0]);
-    return "Word DOCX editable creado y descargado.";
-  }
-
-  if (tool.slug === "pdf-a-powerpoint") {
-    return "PDF a PowerPoint editable manteniendo formato real requiere backend especializado.";
-  }
-
-  if (tool.slug === "pdf-a-excel") {
-    return "PDF a Excel con tablas editables y formato real requiere backend especializado.";
-  }
-
   if (tool.slug === "jpg-a-pdf" || tool.slug === "escanea-a-pdf") {
     const output = await PDFDocument.create();
     for (const file of files) {
@@ -1555,162 +1542,6 @@ async function createPdfFromUrl(url: string) {
   downloadBlob(await response.blob(), "url-a-pdf.pdf");
 }
 
-async function convertPdfToWord(file: File) {
-  const formData = new FormData();
-  formData.append("file", file, file.name);
-  const response = await fetch("/api/pdf-to-word", {
-    method: "POST",
-    body: formData
-  });
-
-  if (!response.ok) throw new Error(await response.text());
-  downloadBlob(await response.blob(), `${file.name.replace(/\.pdf$/i, "") || "pdf-a-word"}.docx`);
-}
-
-async function createPowerPointFromPdf(file: File) {
-  const pages = await renderPdfPagesToImages(file, 1.35, "image/jpeg", 0.86);
-  const JSZip = (await import("jszip")).default;
-  const zip = new JSZip();
-  const slideWidth = 9144000;
-  const slideHeight = 6858000;
-
-  zip.file("[Content_Types].xml", pptContentTypes(pages.length));
-  zip.file("_rels/.rels", relsXml([{ id: "rId1", type: officeRel("officeDocument"), target: "ppt/presentation.xml" }]));
-  zip.file("ppt/presentation.xml", presentationXml(pages.length, slideWidth, slideHeight));
-  zip.file("ppt/_rels/presentation.xml.rels", presentationRelsXml(pages.length));
-
-  pages.forEach((page, index) => {
-    zip.file(`ppt/slides/slide${index + 1}.xml`, slideXml(index + 1, slideWidth, slideHeight));
-    zip.file(
-      `ppt/slides/_rels/slide${index + 1}.xml.rels`,
-      relsXml([{ id: "rId1", type: officeRel("image"), target: `../media/image${index + 1}.jpg` }])
-    );
-    zip.file(`ppt/media/image${index + 1}.jpg`, page.blob);
-  });
-
-  downloadBytes(await zip.generateAsync({ type: "uint8array" }), "pdf-a-powerpoint.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation");
-}
-
-async function createExcelFromPdfText(text: string) {
-  const JSZip = (await import("jszip")).default;
-  const zip = new JSZip();
-  const rows = textToRows(text);
-
-  zip.file("[Content_Types].xml", xlsxContentTypes());
-  zip.file("_rels/.rels", relsXml([{ id: "rId1", type: officeRel("officeDocument"), target: "xl/workbook.xml" }]));
-  zip.file("xl/workbook.xml", workbookXml());
-  zip.file("xl/_rels/workbook.xml.rels", relsXml([{ id: "rId1", type: officeRel("worksheet"), target: "worksheets/sheet1.xml" }]));
-  zip.file("xl/worksheets/sheet1.xml", worksheetXml(rows));
-
-  downloadBytes(await zip.generateAsync({ type: "uint8array" }), "pdf-a-excel.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-}
-
-async function renderPdfPagesToImages(file: File, scale: number, mime: string, quality: number) {
-  const pdfjs = await loadPdfJs();
-  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
-  const pages: Array<{ blob: Blob; width: number; height: number }> = [];
-
-  for (let pageIndex = 0; pageIndex < pdf.numPages; pageIndex += 1) {
-    const page = await pdf.getPage(pageIndex + 1);
-    const viewport = page.getViewport({ scale });
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
-    if (!context) continue;
-    canvas.width = Math.max(1, Math.floor(viewport.width));
-    canvas.height = Math.max(1, Math.floor(viewport.height));
-    await page.render({ canvas, canvasContext: context, viewport }).promise;
-    pages.push({ blob: await canvasToBlob(canvas, mime, quality), width: canvas.width, height: canvas.height });
-  }
-
-  return pages;
-}
-
-function textToRows(text: string) {
-  const lines = text
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const source = lines.length > 0 ? lines : ["No se ha encontrado texto seleccionable en este PDF."];
-  return source.map((line) => line.split(/\s{2,}|\t/).map((cell) => cell.trim()).filter(Boolean));
-}
-
-function xmlEscape(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&apos;");
-}
-
-function officeRel(type: string) {
-  return `http://schemas.openxmlformats.org/officeDocument/2006/relationships/${type}`;
-}
-
-function relsXml(items: Array<{ id: string; type: string; target: string }>) {
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${items
-    .map((item) => `<Relationship Id="${item.id}" Type="${item.type}" Target="${xmlEscape(item.target)}"/>`)
-    .join("")}</Relationships>`;
-}
-
-function xlsxContentTypes() {
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`;
-}
-
-function workbookXml() {
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="PDF" sheetId="1" r:id="rId1"/></sheets></workbook>`;
-}
-
-function worksheetXml(rows: string[][]) {
-  const body = rows
-    .map((row, rowIndex) => {
-      const cells = row
-        .map((cell, columnIndex) => `<c r="${columnName(columnIndex)}${rowIndex + 1}" t="inlineStr"><is><t>${xmlEscape(cell)}</t></is></c>`)
-        .join("");
-      return `<row r="${rowIndex + 1}">${cells}</row>`;
-    })
-    .join("");
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${body}</sheetData></worksheet>`;
-}
-
-function columnName(index: number) {
-  let name = "";
-  let value = index + 1;
-  while (value > 0) {
-    const remainder = (value - 1) % 26;
-    name = String.fromCharCode(65 + remainder) + name;
-    value = Math.floor((value - 1) / 26);
-  }
-  return name;
-}
-
-function pptContentTypes(slideCount: number) {
-  const slides = Array.from(
-    { length: slideCount },
-    (_, index) => `<Override PartName="/ppt/slides/slide${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`
-  ).join("");
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpg" ContentType="image/jpeg"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>${slides}</Types>`;
-}
-
-function presentationXml(slideCount: number, width: number, height: number) {
-  const slideIds = Array.from({ length: slideCount }, (_, index) => `<p:sldId id="${256 + index}" r:id="rId${index + 1}"/>`).join("");
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldIdLst>${slideIds}</p:sldIdLst><p:sldSz cx="${width}" cy="${height}" type="screen4x3"/><p:notesSz cx="${width}" cy="${height}"/></p:presentation>`;
-}
-
-function presentationRelsXml(slideCount: number) {
-  return relsXml(
-    Array.from({ length: slideCount }, (_, index) => ({
-      id: `rId${index + 1}`,
-      type: officeRel("slide"),
-      target: `slides/slide${index + 1}.xml`
-    }))
-  );
-}
-
-function slideXml(pageNumber: number, width: number, height: number) {
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${width}" cy="${height}"/><a:chOff x="0" y="0"/><a:chExt cx="${width}" cy="${height}"/></a:xfrm></p:grpSpPr><p:pic><p:nvPicPr><p:cNvPr id="2" name="Pagina ${pageNumber}"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${width}" cy="${height}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic></p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`;
-}
-
 async function compressPdfAsRaster(file: File, level: string) {
   const pdfjs = await loadPdfJs();
   const { PDFDocument } = await import("pdf-lib");
@@ -1788,25 +1619,6 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) 
       else reject(new Error("Canvas export failed"));
     }, type, quality);
   });
-}
-
-async function extractPdfText(file: File) {
-  const pdfjs = await loadPdfJs();
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const pdf = await pdfjs.getDocument({ data: bytes }).promise;
-  const lines: string[] = [];
-
-  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-    const page = await pdf.getPage(pageNumber);
-    const content = await page.getTextContent();
-    const pageText = content.items
-      .map((item) => ("str" in item ? item.str : ""))
-      .filter(Boolean)
-      .join(" ");
-    lines.push(pageText);
-  }
-
-  return lines.join("\n\n");
 }
 
 async function loadPdfJs() {

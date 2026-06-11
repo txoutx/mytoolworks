@@ -37,9 +37,6 @@ const toolIconMap: Record<string, ComponentType<{ size?: number; className?: str
   "unir-pdf": Combine,
   "dividir-pdf": Split,
   "comprimir-pdf": Minimize2,
-  "pdf-a-word": FileType,
-  "pdf-a-powerpoint": Presentation,
-  "pdf-a-excel": FileSpreadsheet,
   "word-a-pdf": FileType,
   "powerpoint-a-pdf": Presentation,
   "excel-a-pdf": FileSpreadsheet,
@@ -128,9 +125,6 @@ function getAccent(tool: Tool) {
 
 function getOutputLabel(tool: Tool) {
   if (tool.slug === "pdf-a-jpg") return "IMG";
-  if (tool.output === "docx") return "W";
-  if (tool.output === "pptx") return "P";
-  if (tool.output === "xlsx") return "X";
   if (tool.output === "jpg") return "JPG";
   return null;
 }

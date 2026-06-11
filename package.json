@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postinstall": "python -m pip install -r requirements.txt -t .python_packages",
     "start": "next start",
     "lint": "next lint"
   },
