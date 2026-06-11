@@ -62,10 +62,13 @@ function PdfUploader({ tool }: { tool: Tool }) {
   const [signatureMode, setSignatureMode] = useState<"draw" | "certificate">("draw");
   const [certificateName, setCertificateName] = useState("");
   const [signaturePlacement, setSignaturePlacement] = useState({ pageId: "", xPct: 0.5, yPct: 0.78 });
+  const [signaturePreview, setSignaturePreview] = useState("");
+  const [isDraggingSignature, setIsDraggingSignature] = useState(false);
   const [splitMode, setSplitMode] = useState<"all" | "range">("all");
   const [pageRange, setPageRange] = useState("1");
   const [compressionLevel, setCompressionLevel] = useState("recommended");
   const [imageFormat, setImageFormat] = useState<"jpg" | "png" | "webp">("jpg");
+  const [urlToPdf, setUrlToPdf] = useState("https://");
 
   const multiple = tool.input === "multi-file";
   const accept = getAcceptedTypes(tool);
@@ -87,7 +90,9 @@ function PdfUploader({ tool }: { tool: Tool }) {
     let cancelled = false;
 
     async function renderPages() {
-      const pdfFiles = files.filter((file) => file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf"));
+      const pdfFiles = files
+        .map((file, originalIndex) => ({ file, originalIndex }))
+        .filter(({ file }) => file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf"));
       if (pdfFiles.length === 0) {
         setPagePreviews([]);
         setPageOrder([]);
@@ -95,13 +100,12 @@ function PdfUploader({ tool }: { tool: Tool }) {
         return;
       }
 
-      const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      const pdfjs = await loadPdfJs();
       const rendered: PagePreview[] = [];
 
       for (let fileIndex = 0; fileIndex < pdfFiles.length; fileIndex += 1) {
-        const file = pdfFiles[fileIndex];
-        const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), disableWorker: true } as never)
-          .promise;
+        const { file, originalIndex } = pdfFiles[fileIndex];
+        const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
         for (let pageIndex = 0; pageIndex < pdf.numPages; pageIndex += 1) {
           const page = await pdf.getPage(pageIndex + 1);
           const viewport = page.getViewport({ scale: 0.34 });
@@ -112,8 +116,8 @@ function PdfUploader({ tool }: { tool: Tool }) {
           canvas.height = viewport.height;
           await page.render({ canvas, canvasContext: context, viewport }).promise;
           rendered.push({
-            id: `${fileIndex}-${pageIndex}`,
-            fileIndex,
+            id: `${originalIndex}-${pageIndex}`,
+            fileIndex: originalIndex,
             pageIndex,
             pageNumber: pageIndex + 1,
             name: file.name,
@@ -184,14 +188,19 @@ function PdfUploader({ tool }: { tool: Tool }) {
     setSelectedPages((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   }
 
-  function rotatePage(id: string) {
-    setPageRotations((current) => ({ ...current, [id]: ((current[id] ?? 0) + 90) % 360 }));
+  function rotatePage(id: string, direction: -90 | 90 = 90) {
+    setPageRotations((current) => ({ ...current, [id]: normalizeDegrees((current[id] ?? 0) + direction) }));
   }
 
   async function processFiles() {
-    if (files.length === 0) {
+    if (files.length === 0 && tool.slug !== "html-a-pdf") {
       setStatus("error");
       setMessage("Primero selecciona un archivo.");
+      return;
+    }
+    if (tool.slug === "html-a-pdf" && !/^https?:\/\/.+/i.test(urlToPdf.trim())) {
+      setStatus("error");
+      setMessage("Introduce una URL valida que empiece por http:// o https://.");
       return;
     }
     if (tool.slug === "firmar-pdf" && signatureMode === "draw" && !signatureHasInk) {
@@ -222,14 +231,15 @@ function PdfUploader({ tool }: { tool: Tool }) {
         splitMode,
         pageRange,
         compressionLevel,
-        imageFormat
+        imageFormat,
+        urlToPdf
       });
 
       setStatus("done");
       setMessage(output);
-    } catch {
+    } catch (error) {
       setStatus("error");
-      setMessage("No se pudo procesar con esta herramienta.");
+      setMessage(error instanceof Error ? error.message : "No se pudo procesar con esta herramienta.");
     }
   }
 
@@ -263,44 +273,76 @@ function PdfUploader({ tool }: { tool: Tool }) {
     if (!canvas || !ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     setSignatureHasInk(false);
+    setSignaturePreview("");
   }
+
+  function finishSignature() {
+    setIsDrawingSignature(false);
+    const canvas = signatureCanvasRef.current;
+    if (canvas && signatureHasInk) setSignaturePreview(canvas.toDataURL("image/png"));
+  }
+
+  function placeSignatureOnPreview(event: React.PointerEvent<HTMLElement> | React.MouseEvent<HTMLElement>, pageId: string) {
+    const thumb = event.currentTarget.querySelector(".document-thumb");
+    const rect = thumb?.getBoundingClientRect();
+    const xPct = rect ? (event.clientX - rect.left) / rect.width : 0.5;
+    const yPct = rect ? (event.clientY - rect.top) / rect.height : 0.78;
+    setSelectedPages([pageId]);
+    setSignaturePlacement({
+      pageId,
+      xPct: Math.min(Math.max(xPct, 0.08), 0.92),
+      yPct: Math.min(Math.max(yPct, 0.08), 0.92)
+    });
+  }
+
+  const pageCardTools = ["dividir-pdf", "ordenar-pdf", "rotar-pdf", "firmar-pdf", "pdf-a-jpg"];
+  const showFirstPageCards = previews.length > 0 && !["unir-pdf", ...pageCardTools].includes(tool.slug);
 
   return (
     <div className="tool-workspace">
       <h2>{tool.title}</h2>
-      <input
-        ref={inputRef}
-        className="sr-only"
-        type="file"
-        accept={accept}
-        multiple={multiple}
-        onChange={(event) => addFiles(event.target.files)}
-      />
-      <button
-        type="button"
-        className={dragging ? "dropzone active" : "dropzone"}
-        onClick={() => inputRef.current?.click()}
-        onDragEnter={(event) => {
-          event.preventDefault();
-          setDragging(true);
-        }}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(event) => {
-          event.preventDefault();
-          setDragging(false);
-          addFiles(event.dataTransfer.files);
-        }}
-      >
-        <div>
-          <UploadCloud size={36} aria-hidden="true" />
-          <strong>{files.length > 0 ? "Anadir mas archivos" : "Seleccionar archivos"}</strong>
-          <span>Haz clic o arrastra aqui {multiple ? "tus archivos" : "tu archivo"}.</span>
+      {tool.slug === "html-a-pdf" ? (
+        <div className="tool-options">
+          <TextField label="URL de la pagina" value={urlToPdf} onChange={setUrlToPdf} />
+          <p className="option-note">Introduce un enlace publico. La herramienta generara un PDF con el contenido principal de la pagina.</p>
         </div>
-      </button>
+      ) : (
+        <>
+          <input
+            ref={inputRef}
+            className="sr-only"
+            type="file"
+            accept={accept}
+            multiple={multiple}
+            onChange={(event) => addFiles(event.target.files)}
+          />
+          <button
+            type="button"
+            className={dragging ? "dropzone active" : "dropzone"}
+            onClick={() => inputRef.current?.click()}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setDragging(true);
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(event) => {
+              event.preventDefault();
+              setDragging(false);
+              addFiles(event.dataTransfer.files);
+            }}
+          >
+            <div>
+              <UploadCloud size={36} aria-hidden="true" />
+              <strong>{files.length > 0 ? "Anadir mas archivos" : "Seleccionar archivos"}</strong>
+              <span>Haz clic o arrastra aqui {multiple ? "tus archivos" : "tu archivo"}.</span>
+            </div>
+          </button>
+        </>
+      )}
 
       {files.length > 0 && (
         <div className="file-list">
@@ -335,35 +377,43 @@ function PdfUploader({ tool }: { tool: Tool }) {
                 ) : firstPageForFile(pagePreviews, index) ? (
                   <img src={firstPageForFile(pagePreviews, index)?.thumbnail} alt={`Primera pagina de ${preview.name}`} />
                 ) : (
-                  <div className="paper-preview" aria-hidden="true">
-                    <span />
-                    <span />
-                    <span />
-                    <span />
-                    <span />
+                  <div className="preview-loading" aria-hidden="true">
+                    Generando vista previa...
                   </div>
                 )}
               </div>
               <div className="document-name" title={preview.name}>
                 {preview.name}
               </div>
-              <div className="document-actions">
-                <button type="button" onClick={() => moveFile(index, -1)} disabled={index === 0}>
-                  Arriba
-                </button>
-                <button type="button" onClick={() => moveFile(index, 1)} disabled={index === files.length - 1}>
-                  Abajo
-                </button>
-                <button type="button" onClick={() => removeFile(index)}>
-                  Quitar
-                </button>
+            </article>
+          ))}
+        </div>
+      )}
+
+      {showFirstPageCards && (
+        <div className="document-board">
+          {previews.map((preview, index) => (
+            <article className="document-card" key={preview.url}>
+              <div className="document-thumb">
+                {preview.type.startsWith("image/") ? (
+                  <img src={preview.url} alt={`Vista previa de ${preview.name}`} />
+                ) : firstPageForFile(pagePreviews, index) ? (
+                  <img src={firstPageForFile(pagePreviews, index)?.thumbnail} alt={`Primera pagina de ${preview.name}`} />
+                ) : (
+                  <div className="preview-loading" aria-hidden="true">
+                    Generando vista previa...
+                  </div>
+                )}
+              </div>
+              <div className="document-name" title={preview.name}>
+                {preview.name}
               </div>
             </article>
           ))}
         </div>
       )}
 
-      {pagePreviews.length > 0 && ["dividir-pdf", "ordenar-pdf", "rotar-pdf", "firmar-pdf", "pdf-a-jpg"].includes(tool.slug) && (
+      {pagePreviews.length > 0 && pageCardTools.includes(tool.slug) && (
         <div className="document-board page-board">
           {orderedPagePreviews(pagePreviews, pageOrder).map((page, index) => {
             const selected = selectedPages.includes(page.id);
@@ -383,18 +433,15 @@ function PdfUploader({ tool }: { tool: Tool }) {
                   }
                   if (tool.slug === "pdf-a-jpg") togglePage(page.id);
                   if (tool.slug === "firmar-pdf") {
-                    const thumb = event.currentTarget.querySelector(".document-thumb");
-                    const rect = thumb?.getBoundingClientRect();
-                    const xPct = rect ? (event.clientX - rect.left) / rect.width : 0.5;
-                    const yPct = rect ? (event.clientY - rect.top) / rect.height : 0.78;
-                    setSelectedPages([page.id]);
-                    setSignaturePlacement({
-                      pageId: page.id,
-                      xPct: Math.min(Math.max(xPct, 0.08), 0.92),
-                      yPct: Math.min(Math.max(yPct, 0.08), 0.92)
-                    });
+                    placeSignatureOnPreview(event, page.id);
                   }
                 }}
+                onPointerMove={(event) => {
+                  if (tool.slug === "firmar-pdf" && isDraggingSignature && signaturePlacement.pageId === page.id) {
+                    placeSignatureOnPreview(event, page.id);
+                  }
+                }}
+                onPointerUp={() => setIsDraggingSignature(false)}
                 onDragStart={() => setDraggedPageId(page.id)}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={() => dropPage(page.id)}
@@ -406,12 +453,16 @@ function PdfUploader({ tool }: { tool: Tool }) {
                     alt={`Pagina ${page.pageNumber}`}
                     style={{ transform: `rotate(${pageRotations[page.id] ?? 0}deg)` }}
                   />
-                  {tool.slug === "firmar-pdf" && signaturePlacement.pageId === page.id && (
+                  {tool.slug === "firmar-pdf" && signaturePlacement.pageId === page.id && signaturePreview && (
                     <span
-                      className="signature-marker"
+                      className="signature-marker signature-image-marker"
                       style={{ left: `${signaturePlacement.xPct * 100}%`, top: `${signaturePlacement.yPct * 100}%` }}
+                      onPointerDown={(event) => {
+                        event.stopPropagation();
+                        setIsDraggingSignature(true);
+                      }}
                     >
-                      Firma
+                      <img src={signaturePreview} alt="Firma" />
                     </span>
                   )}
                 </div>
@@ -424,10 +475,19 @@ function PdfUploader({ tool }: { tool: Tool }) {
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation();
-                        rotatePage(page.id);
+                        rotatePage(page.id, -90);
                       }}
                     >
-                      Rotar
+                      -90
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        rotatePage(page.id, 90);
+                      }}
+                    >
+                      +90
                     </button>
                   </div>
                 )}
@@ -577,27 +637,18 @@ function PdfUploader({ tool }: { tool: Tool }) {
                 className="signature-pad"
                 onPointerDown={startSignature}
                 onPointerMove={drawSignature}
-                onPointerUp={() => setIsDrawingSignature(false)}
-                onPointerLeave={() => setIsDrawingSignature(false)}
+                onPointerUp={finishSignature}
+                onPointerLeave={finishSignature}
               />
               <button type="button" className="small-action" onClick={clearSignature}>
                 Borrar firma
               </button>
             </div>
           ) : (
-            <div className="field">
-              <label htmlFor="certificate-file">Certificado (.p12 / .pfx)</label>
-              <input
-                id="certificate-file"
-                type="file"
-                accept=".p12,.pfx"
-                onChange={(event) => setCertificateName(event.target.files?.[0]?.name ?? "")}
-              />
-              <small>
-                {certificateName
-                  ? `Seleccionado: ${certificateName}. La firma criptografica real requiere backend seguro.`
-                  : "Selecciona certificado y marca visualmente la pagina donde ira la firma."}
-              </small>
+            <div className="result-box compact-result">
+              La firma digital con certificado instalado, sellado de tiempo cualificado y cumplimiento eIDAS/ESIGN/UETA
+              requiere una app local o backend de firma. El navegador no puede leer certificados instalados ni custodiar
+              claves privadas de forma segura.
             </div>
           )}
           <p className="option-note">Haz click sobre la miniatura de una pagina para elegir exactamente donde colocar la firma.</p>
@@ -635,7 +686,7 @@ function PdfUploader({ tool }: { tool: Tool }) {
       <button
         className="button process-button"
         type="button"
-        disabled={files.length === 0 || status === "processing"}
+        disabled={(files.length === 0 && tool.slug !== "html-a-pdf") || status === "processing"}
         onClick={processFiles}
       >
         {status === "processing" ? "Procesando..." : `Procesar ${tool.title}`}
@@ -998,6 +1049,10 @@ function moveArrayItem<T>(items: T[], from: number, to: number) {
   return next;
 }
 
+function normalizeDegrees(value: number) {
+  return ((value % 360) + 360) % 360;
+}
+
 function orderedPagePreviews(pages: PagePreview[], order: string[]) {
   const byId = new Map(pages.map((page) => [page.id, page]));
   const ordered = order.map((id) => byId.get(id)).filter((page): page is PagePreview => Boolean(page));
@@ -1010,7 +1065,7 @@ function firstPageForFile(pages: PagePreview[], fileIndex: number) {
 }
 
 function getAcceptedTypes(tool: Tool) {
-  if (tool.slug === "jpg-a-pdf" || tool.slug === "escanea-a-pdf") return "image/jpeg,image/png";
+  if (tool.slug === "jpg-a-pdf" || tool.slug === "escanea-a-pdf") return "image/*";
   if (tool.slug === "word-a-pdf") return ".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
   if (tool.slug === "powerpoint-a-pdf") return ".ppt,.pptx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation";
   if (tool.slug === "excel-a-pdf") return ".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -1039,38 +1094,42 @@ async function processPdfTool(
     pageRange: string;
     compressionLevel: string;
     imageFormat: "jpg" | "png" | "webp";
+    urlToPdf: string;
   }
 ) {
   const { PDFDocument, StandardFonts, rgb, degrees } = await import("pdf-lib");
 
   if (tool.slug === "pdf-a-word") {
+    await createVisualWordFromPdf(files[0]);
+    return "Documento Word visual creado y descargado.";
+  }
+
+  if (tool.slug === "pdf-a-powerpoint") {
+    await createPowerPointFromPdf(files[0]);
+    return "PowerPoint creado y descargado.";
+  }
+
+  if (tool.slug === "pdf-a-excel") {
     const text = await extractPdfText(files[0]);
-    const { Document, Packer, Paragraph } = await import("docx");
-    const doc = new Document({
-      sections: [
-        {
-          children: text
-            .split("\n")
-            .filter(Boolean)
-            .map((line) => new Paragraph(line))
-        }
-      ]
-    });
-    const blob = await Packer.toBlob(doc);
-    downloadBlob(blob, "pdf-a-word.docx");
-    return "Documento Word creado y descargado.";
+    await createExcelFromPdfText(text);
+    return "Excel creado y descargado.";
   }
 
   if (tool.slug === "jpg-a-pdf" || tool.slug === "escanea-a-pdf") {
     const output = await PDFDocument.create();
     for (const file of files) {
-      const bytes = await file.arrayBuffer();
-      const image = file.type === "image/png" ? await output.embedPng(bytes) : await output.embedJpg(bytes);
+      const bytes = await imageFileToPngBytes(file);
+      const image = await output.embedPng(bytes);
       const page = output.addPage([image.width, image.height]);
       page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
     }
     downloadBytes(await output.save(), "imagenes.pdf", "application/pdf");
     return "PDF creado y descargado.";
+  }
+
+  if (tool.slug === "html-a-pdf") {
+    await createPdfFromUrl(options.urlToPdf);
+    return "PDF de URL creado y descargado.";
   }
 
   if (tool.input !== "multi-file" && !files[0].type.includes("pdf") && !files[0].name.toLowerCase().endsWith(".pdf")) {
@@ -1082,7 +1141,7 @@ async function processPdfTool(
     return `Imagenes ${options.imageFormat.toUpperCase()} exportadas.`;
   }
 
-  if (["pdf-a-powerpoint", "pdf-a-excel", "word-a-pdf", "powerpoint-a-pdf", "excel-a-pdf", "html-a-pdf"].includes(tool.slug)) {
+  if (["word-a-pdf", "powerpoint-a-pdf", "excel-a-pdf"].includes(tool.slug)) {
     return "Esta conversion necesita backend especializado para producir un resultado fiable.";
   }
 
@@ -1106,11 +1165,15 @@ async function processPdfTool(
         : options.splitMode === "range"
           ? parsePageSelection(options.pageRange, source.getPageCount())
           : source.getPageIndices();
-    const output = await PDFDocument.create();
-    const copied = await output.copyPages(source, selectedIndices);
-    copied.forEach((page) => output.addPage(page));
-    downloadBytes(await output.save(), "paginas-extraidas.pdf", "application/pdf");
-    return "Paginas seleccionadas extraidas y descargadas.";
+    if (selectedIndices.length === 1) {
+      const output = await PDFDocument.create();
+      const copied = await output.copyPages(source, selectedIndices);
+      copied.forEach((page) => output.addPage(page));
+      downloadBytes(await output.save(), `pagina-${selectedIndices[0] + 1}.pdf`, "application/pdf");
+      return "Pagina seleccionada descargada.";
+    }
+    await downloadSplitPagesZip(source, selectedIndices);
+    return "Paginas seleccionadas descargadas en ZIP.";
   }
 
   const source = await PDFDocument.load(await files[0].arrayBuffer(), { ignoreEncryption: true });
@@ -1118,16 +1181,16 @@ async function processPdfTool(
   const pages = source.getPages();
 
   if (tool.slug === "comprimir-pdf") {
-    await compressPdfAsRaster(files[0], options.compressionLevel);
-    return "PDF comprimido y descargado.";
+    return compressPdfAsRaster(files[0], options.compressionLevel);
   }
 
   if (tool.slug === "rotar-pdf") {
+    const hasIndividualRotations = Object.keys(options.pageRotations).length > 0;
     pages.forEach((page, index) => {
       const id = `0-${index}`;
       const selected = options.selectedPages.includes(id);
       const individualRotation = options.pageRotations[id] ?? 0;
-      if (options.rotateScope === "all") page.setRotation(degrees(options.rotation));
+      if (options.rotateScope === "all" && !hasIndividualRotations) page.setRotation(degrees(options.rotation));
       if (options.rotateScope === "selected" && selected) page.setRotation(degrees(options.rotation));
       if (individualRotation) page.setRotation(degrees(individualRotation));
     });
@@ -1297,9 +1360,9 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 async function exportPdfPagesAsImages(file: File, selectedPages: string[], format: "jpg" | "png" | "webp") {
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const pdfjs = await loadPdfJs();
   const JSZip = (await import("jszip")).default;
-  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), disableWorker: true } as never).promise;
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
   const pageIndexes =
     selectedPages.length > 0
       ? selectedPages.map((id) => Number(id.split("-")[1])).filter((index) => Number.isFinite(index))
@@ -1327,33 +1390,289 @@ async function exportPdfPagesAsImages(file: File, selectedPages: string[], forma
   downloadBytes(await zip.generateAsync({ type: "uint8array" }), `pdf-imagenes-${format}.zip`, "application/zip");
 }
 
+async function downloadSplitPagesZip(source: any, selectedIndices: number[]) {
+  const JSZip = (await import("jszip")).default;
+  const zip = new JSZip();
+
+  for (const pageIndex of selectedIndices) {
+    const output = await (await import("pdf-lib")).PDFDocument.create();
+    const [copied] = await output.copyPages(source, [pageIndex]);
+    output.addPage(copied);
+    zip.file(`pagina-${pageIndex + 1}.pdf`, await output.save());
+  }
+
+  downloadBytes(await zip.generateAsync({ type: "uint8array" }), "paginas-seleccionadas.zip", "application/zip");
+}
+
+async function createVisualWordFromPdf(file: File) {
+  const pages = await renderPdfPagesToImages(file, 1.45, "image/png", 0.92);
+  const { Document, ImageRun, Packer, Paragraph } = await import("docx");
+  const preparedPages = await Promise.all(
+    pages.map(async (page) => ({
+      data: new Uint8Array(await page.blob.arrayBuffer()),
+      size: fitImage(page.width, page.height, 620, 860)
+    }))
+  );
+  const doc = new Document({
+    sections: [
+      {
+        children: preparedPages.flatMap((page, index) => [
+          new Paragraph({
+            children: [
+              new ImageRun({
+                type: "png",
+                data: page.data,
+                transformation: page.size
+              })
+            ]
+          }),
+          ...(index < preparedPages.length - 1 ? [new Paragraph({ text: "" })] : [])
+        ])
+      }
+    ]
+  });
+  downloadBlob(await Packer.toBlob(doc), "pdf-a-word.docx");
+}
+
+function fitImage(width: number, height: number, maxWidth: number, maxHeight: number) {
+  const ratio = Math.min(maxWidth / width, maxHeight / height);
+  return { width: Math.round(width * ratio), height: Math.round(height * ratio) };
+}
+
+async function imageFileToPngBytes(file: File) {
+  const bitmap = await createImageBitmap(file);
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("No se pudo leer esta imagen.");
+  context.drawImage(bitmap, 0, 0);
+  const blob = await canvasToBlob(canvas, "image/png", 0.92);
+  return blob.arrayBuffer();
+}
+
+async function createPdfFromUrl(url: string) {
+  const response = await fetch("/api/url-to-pdf", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url })
+  });
+  if (!response.ok) throw new Error(await response.text());
+  downloadBlob(await response.blob(), "url-a-pdf.pdf");
+}
+
+async function createPowerPointFromPdf(file: File) {
+  const pages = await renderPdfPagesToImages(file, 1.35, "image/jpeg", 0.86);
+  const JSZip = (await import("jszip")).default;
+  const zip = new JSZip();
+  const slideWidth = 9144000;
+  const slideHeight = 6858000;
+
+  zip.file("[Content_Types].xml", pptContentTypes(pages.length));
+  zip.file("_rels/.rels", relsXml([{ id: "rId1", type: officeRel("officeDocument"), target: "ppt/presentation.xml" }]));
+  zip.file("ppt/presentation.xml", presentationXml(pages.length, slideWidth, slideHeight));
+  zip.file("ppt/_rels/presentation.xml.rels", presentationRelsXml(pages.length));
+
+  pages.forEach((page, index) => {
+    zip.file(`ppt/slides/slide${index + 1}.xml`, slideXml(index + 1, slideWidth, slideHeight));
+    zip.file(
+      `ppt/slides/_rels/slide${index + 1}.xml.rels`,
+      relsXml([{ id: "rId1", type: officeRel("image"), target: `../media/image${index + 1}.jpg` }])
+    );
+    zip.file(`ppt/media/image${index + 1}.jpg`, page.blob);
+  });
+
+  downloadBytes(await zip.generateAsync({ type: "uint8array" }), "pdf-a-powerpoint.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+}
+
+async function createExcelFromPdfText(text: string) {
+  const JSZip = (await import("jszip")).default;
+  const zip = new JSZip();
+  const rows = textToRows(text);
+
+  zip.file("[Content_Types].xml", xlsxContentTypes());
+  zip.file("_rels/.rels", relsXml([{ id: "rId1", type: officeRel("officeDocument"), target: "xl/workbook.xml" }]));
+  zip.file("xl/workbook.xml", workbookXml());
+  zip.file("xl/_rels/workbook.xml.rels", relsXml([{ id: "rId1", type: officeRel("worksheet"), target: "worksheets/sheet1.xml" }]));
+  zip.file("xl/worksheets/sheet1.xml", worksheetXml(rows));
+
+  downloadBytes(await zip.generateAsync({ type: "uint8array" }), "pdf-a-excel.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+}
+
+async function renderPdfPagesToImages(file: File, scale: number, mime: string, quality: number) {
+  const pdfjs = await loadPdfJs();
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const pages: Array<{ blob: Blob; width: number; height: number }> = [];
+
+  for (let pageIndex = 0; pageIndex < pdf.numPages; pageIndex += 1) {
+    const page = await pdf.getPage(pageIndex + 1);
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) continue;
+    canvas.width = Math.max(1, Math.floor(viewport.width));
+    canvas.height = Math.max(1, Math.floor(viewport.height));
+    await page.render({ canvas, canvasContext: context, viewport }).promise;
+    pages.push({ blob: await canvasToBlob(canvas, mime, quality), width: canvas.width, height: canvas.height });
+  }
+
+  return pages;
+}
+
+function textToRows(text: string) {
+  const lines = text
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const source = lines.length > 0 ? lines : ["No se ha encontrado texto seleccionable en este PDF."];
+  return source.map((line) => line.split(/\s{2,}|\t/).map((cell) => cell.trim()).filter(Boolean));
+}
+
+function xmlEscape(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+}
+
+function officeRel(type: string) {
+  return `http://schemas.openxmlformats.org/officeDocument/2006/relationships/${type}`;
+}
+
+function relsXml(items: Array<{ id: string; type: string; target: string }>) {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${items
+    .map((item) => `<Relationship Id="${item.id}" Type="${item.type}" Target="${xmlEscape(item.target)}"/>`)
+    .join("")}</Relationships>`;
+}
+
+function xlsxContentTypes() {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`;
+}
+
+function workbookXml() {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="PDF" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+}
+
+function worksheetXml(rows: string[][]) {
+  const body = rows
+    .map((row, rowIndex) => {
+      const cells = row
+        .map((cell, columnIndex) => `<c r="${columnName(columnIndex)}${rowIndex + 1}" t="inlineStr"><is><t>${xmlEscape(cell)}</t></is></c>`)
+        .join("");
+      return `<row r="${rowIndex + 1}">${cells}</row>`;
+    })
+    .join("");
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${body}</sheetData></worksheet>`;
+}
+
+function columnName(index: number) {
+  let name = "";
+  let value = index + 1;
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    name = String.fromCharCode(65 + remainder) + name;
+    value = Math.floor((value - 1) / 26);
+  }
+  return name;
+}
+
+function pptContentTypes(slideCount: number) {
+  const slides = Array.from(
+    { length: slideCount },
+    (_, index) => `<Override PartName="/ppt/slides/slide${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`
+  ).join("");
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpg" ContentType="image/jpeg"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>${slides}</Types>`;
+}
+
+function presentationXml(slideCount: number, width: number, height: number) {
+  const slideIds = Array.from({ length: slideCount }, (_, index) => `<p:sldId id="${256 + index}" r:id="rId${index + 1}"/>`).join("");
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldIdLst>${slideIds}</p:sldIdLst><p:sldSz cx="${width}" cy="${height}" type="screen4x3"/><p:notesSz cx="${width}" cy="${height}"/></p:presentation>`;
+}
+
+function presentationRelsXml(slideCount: number) {
+  return relsXml(
+    Array.from({ length: slideCount }, (_, index) => ({
+      id: `rId${index + 1}`,
+      type: officeRel("slide"),
+      target: `slides/slide${index + 1}.xml`
+    }))
+  );
+}
+
+function slideXml(pageNumber: number, width: number, height: number) {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${width}" cy="${height}"/><a:chOff x="0" y="0"/><a:chExt cx="${width}" cy="${height}"/></a:xfrm></p:grpSpPr><p:pic><p:nvPicPr><p:cNvPr id="2" name="Pagina ${pageNumber}"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${width}" cy="${height}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic></p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`;
+}
+
 async function compressPdfAsRaster(file: File, level: string) {
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const pdfjs = await loadPdfJs();
   const { PDFDocument } = await import("pdf-lib");
-  const settings = {
-    extreme: { scale: 0.85, quality: 0.38 },
-    recommended: { scale: 1.1, quality: 0.55 },
-    low: { scale: 1.45, quality: 0.72 }
-  }[level] ?? { scale: 1.1, quality: 0.55 };
-  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), disableWorker: true } as never).promise;
+  const sourceBytes = await file.arrayBuffer();
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(sourceBytes.slice(0)) }).promise;
+  const originalSize = file.size;
+  const lossless = await PDFDocument.load(sourceBytes.slice(0), { ignoreEncryption: true }).then((doc) => doc.save({ useObjectStreams: true }));
+  const candidates: Array<{ label: string; bytes: Uint8Array }> = [{ label: "optimizacion interna", bytes: lossless }];
+  const settingsByLevel: Record<string, Array<{ label: string; scale: number; quality: number }>> = {
+    extreme: [
+      { label: "extrema", scale: 0.8, quality: 0.34 },
+      { label: "muy alta", scale: 0.62, quality: 0.26 },
+      { label: "maxima", scale: 0.48, quality: 0.2 },
+      { label: "minima", scale: 0.34, quality: 0.16 }
+    ],
+    recommended: [
+      { label: "recomendada", scale: 1, quality: 0.5 },
+      { label: "alta", scale: 0.82, quality: 0.38 },
+      { label: "muy alta", scale: 0.62, quality: 0.28 }
+    ],
+    low: [
+      { label: "suave", scale: 1.25, quality: 0.68 },
+      { label: "media", scale: 1, quality: 0.52 },
+      { label: "alta", scale: 0.78, quality: 0.38 }
+    ]
+  };
+
+  for (const settings of settingsByLevel[level] ?? settingsByLevel.recommended) {
+    candidates.push({
+      label: settings.label,
+      bytes: await createRasterizedPdf(pdf, settings.scale, settings.quality)
+    });
+  }
+
+  const smallerCandidates = candidates
+    .filter((candidate) => candidate.bytes.byteLength < originalSize)
+    .sort((a, b) => a.bytes.byteLength - b.bytes.byteLength);
+
+  if (smallerCandidates.length === 0) {
+    return "No se descargo nada: este PDF ya esta muy optimizado y las pruebas generaban archivos mas pesados.";
+  }
+
+  const best = smallerCandidates[0];
+  const savedPercent = Math.max(1, Math.round((1 - best.bytes.byteLength / originalSize) * 100));
+  downloadBytes(best.bytes, "pdf-comprimido.pdf", "application/pdf");
+  return `PDF comprimido y descargado. Pesa ${savedPercent}% menos con compresion ${best.label}.`;
+}
+
+async function createRasterizedPdf(pdf: { numPages: number; getPage: (pageNumber: number) => Promise<any> }, scale: number, quality: number) {
+  const { PDFDocument } = await import("pdf-lib");
   const output = await PDFDocument.create();
 
   for (let index = 0; index < pdf.numPages; index += 1) {
     const page = await pdf.getPage(index + 1);
-    const viewport = page.getViewport({ scale: settings.scale });
+    const viewport = page.getViewport({ scale });
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
     if (!context) continue;
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
+    canvas.width = Math.max(1, Math.floor(viewport.width));
+    canvas.height = Math.max(1, Math.floor(viewport.height));
     await page.render({ canvas, canvasContext: context, viewport }).promise;
-    const blob = await canvasToBlob(canvas, "image/jpeg", settings.quality);
+    const blob = await canvasToBlob(canvas, "image/jpeg", quality);
     const jpg = await output.embedJpg(await blob.arrayBuffer());
     const pdfPage = output.addPage([jpg.width, jpg.height]);
     pdfPage.drawImage(jpg, { x: 0, y: 0, width: jpg.width, height: jpg.height });
   }
 
-  downloadBytes(await output.save({ useObjectStreams: true }), "pdf-comprimido.pdf", "application/pdf");
+  return output.save({ useObjectStreams: true });
 }
 
 function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
@@ -1366,9 +1685,9 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) 
 }
 
 async function extractPdfText(file: File) {
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const pdfjs = await loadPdfJs();
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const pdf = await pdfjs.getDocument({ data: bytes, disableWorker: true } as never).promise;
+  const pdf = await pdfjs.getDocument({ data: bytes }).promise;
   const lines: string[] = [];
 
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
@@ -1382,4 +1701,10 @@ async function extractPdfText(file: File) {
   }
 
   return lines.join("\n\n");
+}
+
+async function loadPdfJs() {
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/legacy/build/pdf.worker.mjs", import.meta.url).toString();
+  return pdfjs;
 }

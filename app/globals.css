@@ -350,6 +350,10 @@ h1 {
   cursor: grab;
 }
 
+.document-card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
 .document-card.selected {
   border-color: var(--brand);
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.16), 0 10px 22px rgba(23, 32, 38, 0.08);
@@ -387,6 +391,21 @@ h1 {
   object-fit: contain;
 }
 
+.preview-loading {
+  display: grid;
+  place-items: center;
+  width: 126px;
+  height: 162px;
+  border-radius: 4px;
+  background: #fff;
+  color: var(--muted);
+  padding: 18px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 4px 16px rgba(23, 32, 38, 0.1);
+}
+
 .signature-marker {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -399,6 +418,26 @@ h1 {
   font-weight: 900;
   pointer-events: none;
   box-shadow: 0 6px 14px rgba(15, 118, 110, 0.18);
+}
+
+.signature-image-marker {
+  width: 92px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 3px 6px;
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.signature-image-marker:active {
+  cursor: grabbing;
+}
+
+.signature-image-marker img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .paper-preview {
