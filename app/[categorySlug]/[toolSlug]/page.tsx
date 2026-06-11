@@ -116,12 +116,6 @@ export default async function ToolPage({ params }: PageProps) {
                   <li key={step}>{step}</li>
                 ))}
               </ol>
-              <h2>Detalles de la herramienta</h2>
-              <ul>
-                <li>Modo: {tool.processing === "client" ? "en el navegador" : "requiere backend especializado"}.</li>
-                <li>Entrada: {tool.input}.</li>
-                <li>Salida: {tool.output}.</li>
-              </ul>
               <h2>Privacidad</h2>
               <p>
                 En las herramientas disponibles en navegador, el archivo se procesa localmente siempre que sea posible.
