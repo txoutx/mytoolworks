@@ -30,6 +30,7 @@ type PointerPoint = {
 };
 
 const percentOptions = [25, 50, 75, 100, 150, 200];
+const editorPadding = 72;
 const ratioOptions = [
   { label: "Libre", value: "free" },
   { label: "1:1", value: "1:1" },
@@ -179,18 +180,25 @@ export function ImageTool() {
   function renderToCanvas(canvas: HTMLCanvasElement, includeControls: boolean) {
     const image = imageRef.current;
     if (!image || !imageInfo) return;
-    canvas.width = Math.round(canvasWidth);
-    canvas.height = Math.round(canvasHeight);
+    const offset = includeControls ? editorPadding : 0;
+    canvas.width = Math.round(canvasWidth + offset * 2);
+    canvas.height = Math.round(canvasHeight + offset * 2);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.translate(offset, offset);
+
     if (format === "jpeg") {
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     }
 
     ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, canvasWidth, canvasHeight);
+    ctx.clip();
     ctx.translate(imageX, imageY);
     ctx.rotate((imageRotation * Math.PI) / 180);
     ctx.scale((flipX ? -1 : 1) * (imageScale / 100), (flipY ? -1 : 1) * (imageScale / 100));
@@ -198,8 +206,27 @@ export function ImageTool() {
     ctx.drawImage(image, -imageInfo.width / 2, -imageInfo.height / 2);
     ctx.restore();
 
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, canvasWidth, canvasHeight);
+    ctx.clip();
     drawWatermark(ctx);
-    if (includeControls) drawControls(ctx);
+    ctx.restore();
+
+    if (includeControls) {
+      drawCanvasBoundary(ctx);
+      drawControls(ctx);
+    }
+    ctx.restore();
+  }
+
+  function drawCanvasBoundary(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.strokeStyle = "rgba(15, 118, 110, 0.35)";
+    ctx.lineWidth = Math.max(1, canvasWidth / 520);
+    ctx.setLineDash([6, 5]);
+    ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
+    ctx.restore();
   }
 
   function drawWatermark(ctx: CanvasRenderingContext2D) {
@@ -314,9 +341,10 @@ export function ImageTool() {
   function pointerFromEvent(event: React.PointerEvent<HTMLCanvasElement>) {
     const canvas = event.currentTarget;
     const rect = canvas.getBoundingClientRect();
+    const offset = editorPadding;
     return {
-      x: ((event.clientX - rect.left) / rect.width) * canvas.width,
-      y: ((event.clientY - rect.top) / rect.height) * canvas.height
+      x: ((event.clientX - rect.left) / rect.width) * canvas.width - offset,
+      y: ((event.clientY - rect.top) / rect.height) * canvas.height - offset
     };
   }
 
