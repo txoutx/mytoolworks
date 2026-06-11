@@ -61,6 +61,9 @@ export function CategoryListing({ slug, title, description }: CategoryListingPro
             ))}
           </div>
         </section>
+        <div className="container bottom-ad">
+          <AdSlot label="Anuncio inferior" />
+        </div>
       </main>
       <Footer />
     </div>

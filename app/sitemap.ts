@@ -3,6 +3,7 @@ import { categories, tools } from "./data/tools";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://mytoolworks.com";
+  const legalRoutes = ["/politica-privacidad", "/cookies", "/terminos", "/contacto"];
 
   return [
     {
@@ -22,6 +23,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
       changeFrequency: "monthly" as const,
       priority: tool.status === "Disponible" ? 0.9 : 0.75
+    })),
+    ...legalRoutes.map((route) => ({
+      url: `${baseUrl}${route}`,
+      lastModified: new Date(),
+      changeFrequency: "yearly" as const,
+      priority: 0.35
     }))
   ];
 }

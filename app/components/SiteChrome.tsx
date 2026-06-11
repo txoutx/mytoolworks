@@ -11,6 +11,7 @@ export function Header() {
         </Link>
         <div className="nav-links">
           <Link href="/pdf">PDF</Link>
+          <Link href="/contacto">Contacto</Link>
         </div>
       </nav>
     </header>
@@ -23,11 +24,21 @@ export function Footer() {
       <div className="container footer-inner">
         <span>MyToolWorks.com</span>
         <span>Herramientas PDF online rapidas y limpias.</span>
+        <nav className="footer-links" aria-label="Enlaces legales">
+          <Link href="/politica-privacidad">Privacidad</Link>
+          <Link href="/cookies">Cookies</Link>
+          <Link href="/terminos">Terminos</Link>
+          <Link href="/contacto">Contacto</Link>
+        </nav>
       </div>
     </footer>
   );
 }
 
 export function AdSlot({ label = "Espacio reservado para anuncio" }: { label?: string }) {
-  return <aside className="ad-slot" aria-label={label}>{label}</aside>;
+  return (
+    <aside className="ad-slot" aria-label={label}>
+      <span>Publicidad</span>
+    </aside>
+  );
 }
