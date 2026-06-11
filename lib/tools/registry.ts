@@ -37,7 +37,7 @@ export type Tool = {
   kind: ToolKind;
   processing: ProcessingMode;
   input: "single-file" | "multi-file" | "office-file" | "html";
-  output: "pdf" | "doc" | "docx" | "pptx" | "xlsx" | "jpg" | "text" | "calculation";
+  output: "pdf" | "docx" | "pptx" | "xlsx" | "jpg" | "text" | "calculation";
   adProfile: AdProfile;
 };
 
@@ -136,12 +136,12 @@ export const tools: Tool[] = [
     title: "PDF a Word",
     h1: "Convertir PDF a Word",
     group: "Convertir",
-    description: "Convierte PDF a Word manteniendo una vista fiel y texto editable.",
+    description: "Convierte PDF a DOCX editable manteniendo formato, imagenes y estructura mediante backend real.",
     keywords: ["pdf a word", "pdf a docx"],
     status: "Disponible",
-    processing: "client",
+    processing: "backend-required",
     input: "single-file",
-    output: "doc"
+    output: "docx"
   },
   {
     ...pdfBase,
