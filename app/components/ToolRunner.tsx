@@ -17,6 +17,14 @@ type PagePreview = {
   thumbnail: string;
 };
 
+type PlacedSignature = {
+  id: string;
+  dataUrl: string;
+  pageId: string;
+  xPct: number;
+  yPct: number;
+};
+
 const formatEuro = new Intl.NumberFormat("es-ES", {
   style: "currency",
   currency: "EUR",
@@ -59,11 +67,9 @@ function PdfUploader({ tool }: { tool: Tool }) {
   const [editY, setEditY] = useState(90);
   const [rotation, setRotation] = useState(90);
   const [rotateScope, setRotateScope] = useState<"all" | "selected">("all");
-  const [signatureMode, setSignatureMode] = useState<"draw" | "certificate">("draw");
-  const [certificateName, setCertificateName] = useState("");
-  const [signaturePlacement, setSignaturePlacement] = useState({ pageId: "", xPct: 0.5, yPct: 0.78 });
   const [signaturePreview, setSignaturePreview] = useState("");
-  const [isDraggingSignature, setIsDraggingSignature] = useState(false);
+  const [placedSignatures, setPlacedSignatures] = useState<PlacedSignature[]>([]);
+  const [draggingSignatureId, setDraggingSignatureId] = useState<string | null>(null);
   const [splitMode, setSplitMode] = useState<"all" | "range">("all");
   const [pageRange, setPageRange] = useState("1");
   const [compressionLevel, setCompressionLevel] = useState("recommended");
@@ -203,9 +209,9 @@ function PdfUploader({ tool }: { tool: Tool }) {
       setMessage("Introduce una URL valida que empiece por http:// o https://.");
       return;
     }
-    if (tool.slug === "firmar-pdf" && signatureMode === "draw" && !signatureHasInk) {
+    if (tool.slug === "firmar-pdf" && placedSignatures.length === 0) {
       setStatus("error");
-      setMessage("Dibuja tu firma antes de procesar el PDF.");
+      setMessage("Dibuja y anade al menos una firma al PDF.");
       return;
     }
 
@@ -223,8 +229,7 @@ function PdfUploader({ tool }: { tool: Tool }) {
         editY,
         rotation,
         rotateScope,
-        signatureMode,
-        signaturePlacement,
+        placedSignatures,
         pageOrder,
         selectedPages,
         pageRotations,
@@ -282,17 +287,37 @@ function PdfUploader({ tool }: { tool: Tool }) {
     if (canvas && signatureHasInk) setSignaturePreview(canvas.toDataURL("image/png"));
   }
 
-  function placeSignatureOnPreview(event: React.PointerEvent<HTMLElement> | React.MouseEvent<HTMLElement>, pageId: string) {
+  function getPointerPlacement(event: React.PointerEvent<HTMLElement> | React.MouseEvent<HTMLElement>) {
     const thumb = event.currentTarget.querySelector(".document-thumb");
     const rect = thumb?.getBoundingClientRect();
     const xPct = rect ? (event.clientX - rect.left) / rect.width : 0.5;
     const yPct = rect ? (event.clientY - rect.top) / rect.height : 0.78;
-    setSelectedPages([pageId]);
-    setSignaturePlacement({
-      pageId,
+    return {
       xPct: Math.min(Math.max(xPct, 0.08), 0.92),
       yPct: Math.min(Math.max(yPct, 0.08), 0.92)
-    });
+    };
+  }
+
+  function addSignatureToPdf() {
+    const targetPage = selectedPages[0] ?? pagePreviews[0]?.id;
+    if (!signaturePreview || !targetPage) return;
+    setPlacedSignatures((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        dataUrl: signaturePreview,
+        pageId: targetPage,
+        xPct: 0.5,
+        yPct: 0.78
+      }
+    ]);
+  }
+
+  function moveSignature(event: React.PointerEvent<HTMLElement> | React.MouseEvent<HTMLElement>, pageId: string, signatureId: string) {
+    const placement = getPointerPlacement(event);
+    setPlacedSignatures((current) =>
+      current.map((signature) => (signature.id === signatureId ? { ...signature, pageId, ...placement } : signature))
+    );
   }
 
   const pageCardTools = ["dividir-pdf", "ordenar-pdf", "rotar-pdf", "firmar-pdf", "pdf-a-jpg"];
@@ -432,16 +457,14 @@ function PdfUploader({ tool }: { tool: Tool }) {
                     togglePage(page.id);
                   }
                   if (tool.slug === "pdf-a-jpg") togglePage(page.id);
-                  if (tool.slug === "firmar-pdf") {
-                    placeSignatureOnPreview(event, page.id);
-                  }
+                  if (tool.slug === "firmar-pdf") setSelectedPages([page.id]);
                 }}
                 onPointerMove={(event) => {
-                  if (tool.slug === "firmar-pdf" && isDraggingSignature && signaturePlacement.pageId === page.id) {
-                    placeSignatureOnPreview(event, page.id);
+                  if (tool.slug === "firmar-pdf" && draggingSignatureId) {
+                    moveSignature(event, page.id, draggingSignatureId);
                   }
                 }}
-                onPointerUp={() => setIsDraggingSignature(false)}
+                onPointerUp={() => setDraggingSignatureId(null)}
                 onDragStart={() => setDraggedPageId(page.id)}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={() => dropPage(page.id)}
@@ -453,18 +476,22 @@ function PdfUploader({ tool }: { tool: Tool }) {
                     alt={`Pagina ${page.pageNumber}`}
                     style={{ transform: `rotate(${pageRotations[page.id] ?? 0}deg)` }}
                   />
-                  {tool.slug === "firmar-pdf" && signaturePlacement.pageId === page.id && signaturePreview && (
-                    <span
-                      className="signature-marker signature-image-marker"
-                      style={{ left: `${signaturePlacement.xPct * 100}%`, top: `${signaturePlacement.yPct * 100}%` }}
-                      onPointerDown={(event) => {
-                        event.stopPropagation();
-                        setIsDraggingSignature(true);
-                      }}
-                    >
-                      <img src={signaturePreview} alt="Firma" />
-                    </span>
-                  )}
+                  {tool.slug === "firmar-pdf" &&
+                    placedSignatures
+                      .filter((signature) => signature.pageId === page.id)
+                      .map((signature) => (
+                        <span
+                          className="signature-marker signature-image-marker"
+                          style={{ left: `${signature.xPct * 100}%`, top: `${signature.yPct * 100}%` }}
+                          onPointerDown={(event) => {
+                            event.stopPropagation();
+                            setDraggingSignatureId(signature.id);
+                          }}
+                          key={signature.id}
+                        >
+                          <img src={signature.dataUrl} alt="Firma" />
+                        </span>
+                      ))}
                 </div>
                 <div className="document-name" title={`${page.name} - pagina ${page.pageNumber}`}>
                   Pagina {page.pageNumber}
@@ -609,49 +636,30 @@ function PdfUploader({ tool }: { tool: Tool }) {
       )}
       {tool.slug === "firmar-pdf" && (
         <div className="tool-options">
-          <label>
-            <input
-              type="radio"
-              name="signature-mode"
-              checked={signatureMode === "draw"}
-              onChange={() => setSignatureMode("draw")}
+          <div className="signature-pad-wrap">
+            <label>Dibuja una firma</label>
+            <canvas
+              ref={signatureCanvasRef}
+              width={520}
+              height={180}
+              className="signature-pad"
+              onPointerDown={startSignature}
+              onPointerMove={drawSignature}
+              onPointerUp={finishSignature}
+              onPointerLeave={finishSignature}
             />
-            Firma dibujada
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="signature-mode"
-              checked={signatureMode === "certificate"}
-              onChange={() => setSignatureMode("certificate")}
-            />
-            Certificado digital
-          </label>
-          {signatureMode === "draw" ? (
-            <div className="signature-pad-wrap">
-              <label>Dibuja tu firma</label>
-              <canvas
-                ref={signatureCanvasRef}
-                width={520}
-                height={180}
-                className="signature-pad"
-                onPointerDown={startSignature}
-                onPointerMove={drawSignature}
-                onPointerUp={finishSignature}
-                onPointerLeave={finishSignature}
-              />
+            <div className="signature-actions">
+              <button type="button" className="small-action" onClick={addSignatureToPdf} disabled={!signaturePreview || pagePreviews.length === 0}>
+                Anadir firma
+              </button>
               <button type="button" className="small-action" onClick={clearSignature}>
-                Borrar firma
+                Borrar dibujo
               </button>
             </div>
-          ) : (
-            <div className="result-box compact-result">
-              La firma digital con certificado instalado, sellado de tiempo cualificado y cumplimiento eIDAS/ESIGN/UETA
-              requiere una app local o backend de firma. El navegador no puede leer certificados instalados ni custodiar
-              claves privadas de forma segura.
-            </div>
-          )}
-          <p className="option-note">Haz click sobre la miniatura de una pagina para elegir exactamente donde colocar la firma.</p>
+          </div>
+          <p className="option-note">
+            Anade una o varias firmas y arrastralas sobre cualquier pagina. Para crear otra firma distinta, borra el dibujo y dibuja una nueva.
+          </p>
         </div>
       )}
       {tool.slug === "rotar-pdf" && (
@@ -1085,8 +1093,7 @@ async function processPdfTool(
     editY: number;
     rotation: number;
     rotateScope: "all" | "selected";
-    signatureMode: "draw" | "certificate";
-    signaturePlacement: { pageId: string; xPct: number; yPct: number };
+    placedSignatures: PlacedSignature[];
     pageOrder: string[];
     selectedPages: string[];
     pageRotations: Record<string, number>;
@@ -1100,19 +1107,15 @@ async function processPdfTool(
   const { PDFDocument, StandardFonts, rgb, degrees } = await import("pdf-lib");
 
   if (tool.slug === "pdf-a-word") {
-    await createVisualWordFromPdf(files[0]);
-    return "Documento Word visual creado y descargado.";
+    return "PDF a Word editable manteniendo formato real requiere backend especializado. He quitado la conversion falsa por imagen.";
   }
 
   if (tool.slug === "pdf-a-powerpoint") {
-    await createPowerPointFromPdf(files[0]);
-    return "PowerPoint creado y descargado.";
+    return "PDF a PowerPoint editable manteniendo formato real requiere backend especializado.";
   }
 
   if (tool.slug === "pdf-a-excel") {
-    const text = await extractPdfText(files[0]);
-    await createExcelFromPdfText(text);
-    return "Excel creado y descargado.";
+    return "PDF a Excel con tablas editables y formato real requiere backend especializado.";
   }
 
   if (tool.slug === "jpg-a-pdf" || tool.slug === "escanea-a-pdf") {
@@ -1212,23 +1215,21 @@ async function processPdfTool(
   }
 
   if (tool.slug === "firmar-pdf") {
-    if (options.signatureMode === "certificate") {
-      return "Certificado seleccionado visualmente. La firma criptografica real necesita backend seguro para no exponer claves privadas.";
+    for (const signature of options.placedSignatures) {
+      const signatureBytes = await fetch(signature.dataUrl).then((response) => response.arrayBuffer());
+      const signatureImage = await source.embedPng(signatureBytes);
+      const selectedPageIndex = Number(signature.pageId.split("-")[1]);
+      const page = pages[Math.min(Math.max(selectedPageIndex, 0), pages.length - 1)];
+      const { width, height } = page.getSize();
+      const signatureWidth = Math.min(220, width - 112);
+      const signatureHeight = 76;
+      page.drawImage(signatureImage, {
+        x: Math.min(Math.max(signature.xPct * width - signatureWidth / 2, 16), width - signatureWidth - 16),
+        y: Math.min(Math.max(height - signature.yPct * height - signatureHeight / 2, 16), height - signatureHeight - 16),
+        width: signatureWidth,
+        height: signatureHeight
+      });
     }
-    const signatureBytes = await fetch(options.signatureDataUrl).then((response) => response.arrayBuffer());
-    const signatureImage = await source.embedPng(signatureBytes);
-    const selectedId = options.selectedPages[0];
-    const selectedPageIndex = selectedId ? Number(selectedId.split("-")[1]) : pages.length - 1;
-    const page = pages[Math.min(Math.max(selectedPageIndex, 0), pages.length - 1)];
-    const { width, height } = page.getSize();
-    const signatureWidth = Math.min(220, width - 112);
-    const signatureHeight = 76;
-    page.drawImage(signatureImage, {
-      x: Math.min(Math.max(options.signaturePlacement.xPct * width - signatureWidth / 2, 16), width - signatureWidth - 16),
-      y: Math.min(Math.max(height - options.signaturePlacement.yPct * height - signatureHeight / 2, 16), height - signatureHeight - 16),
-      width: signatureWidth,
-      height: signatureHeight
-    });
   }
 
   if (tool.slug === "numeracion-paginas") {
