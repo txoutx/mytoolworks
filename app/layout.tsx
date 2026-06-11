@@ -38,11 +38,13 @@ export default function RootLayout({
     <html lang="es">
       <body>
         <Script
+          id="google-adsense"
           async
+          strategy="beforeInteractive"
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5516465526702669"
           crossOrigin="anonymous"
-          strategy="afterInteractive"
         />
+
         {children}
       </body>
     </html>
