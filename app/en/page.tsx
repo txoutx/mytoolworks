@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { HomePage } from "../page";
+import { HomePageContent } from "../components/HomePageContent";
 
 export const metadata: Metadata = {
   title: "MyToolWorks - Useful online tools",
@@ -16,5 +16,5 @@ export const metadata: Metadata = {
 };
 
 export default function EnglishHome() {
-  return <HomePage locale="en" />;
+  return <HomePageContent locale="en" />;
 }

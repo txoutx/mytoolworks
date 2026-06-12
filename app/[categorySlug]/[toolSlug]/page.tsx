@@ -50,7 +50,7 @@ export default async function ToolPage({ params }: PageProps) {
   return <ToolPageContent tool={tool} locale="es" />;
 }
 
-export function ToolPageContent({ tool: sourceTool, locale }: { tool: Tool; locale: Locale }) {
+function ToolPageContent({ tool: sourceTool, locale }: { tool: Tool; locale: Locale }) {
   const tool = localizeTool(sourceTool, locale);
   const sourceCategory = getCategory(sourceTool.categorySlug);
   const category = sourceCategory ? localizeCategory(sourceCategory, locale) : undefined;

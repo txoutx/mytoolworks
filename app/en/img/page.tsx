@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ImagePageContent } from "../../img/page";
+import { ImagePageContent } from "../../components/ImagePageContent";
 
 export const metadata: Metadata = {
   title: "Online image tools",
