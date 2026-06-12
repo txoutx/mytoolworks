@@ -1639,6 +1639,75 @@ h1 {
   gap: 14px;
 }
 
+.world-clock-search {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fbfcfd;
+  padding: 14px;
+}
+
+.world-clock-zone-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  max-height: 420px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.world-clock-zone {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  align-items: center;
+  border: 1px solid #dbe6eb;
+  border-radius: 10px;
+  background: #fff;
+  color: #172b33;
+  padding: 11px 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.world-clock-zone:hover,
+.world-clock-zone.active {
+  border-color: #27aaa0;
+  background: #eefbf8;
+}
+
+.world-clock-zone span {
+  min-width: 0;
+  overflow: hidden;
+  color: #334650;
+  font-size: 13px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.world-clock-zone strong {
+  color: #172b33;
+  font-size: 16px;
+}
+
+.world-clock-zone small {
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow: hidden;
+  color: #7b8a93;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.world-clock-subtitle {
+  margin: 4px 0 -4px;
+  color: #263941;
+  font-size: 18px;
+}
+
 .clock-card {
   display: grid;
   justify-items: center;
@@ -2100,7 +2169,8 @@ h1 {
   }
 
   .world-clock-grid,
-  .world-clock-list {
+  .world-clock-list,
+  .world-clock-zone-list {
     grid-template-columns: 1fr;
   }
 

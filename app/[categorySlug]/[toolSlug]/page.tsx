@@ -168,8 +168,8 @@ function getToolSeoContent(tool: Tool, locale: Locale = "es") {
     if (tool.slug === "hora-mundial") {
       return {
         heading: `${tool.title} gratis y online`,
-        intro: `${tool.description} Sirve para planificar reuniones, viajes, entregas o llamadas entre paises sin calcular diferencias horarias a mano.`,
-        steps: ["Elige la fecha y la hora de origen.", "Selecciona el pais o zona horaria de origen.", "Selecciona el pais o zona horaria de destino.", "Consulta el reloj de destino y las zonas relacionadas."],
+        intro: `${tool.description} Sirve para planificar reuniones, viajes, entregas o llamadas sin calcular diferencias horarias a mano.`,
+        steps: ["Revisa tu hora local en el primer reloj.", "Busca un pais, ciudad o zona horaria.", "Selecciona el resultado que quieras consultar.", "Compara la hora seleccionada con otras zonas populares."],
         faqs: [
           {
             question: `Puedo usar ${tool.title} gratis?`,
@@ -184,8 +184,8 @@ function getToolSeoContent(tool: Tool, locale: Locale = "es") {
             answer: "Si, el formulario y los relojes son responsive."
           },
           {
-            question: "Puedo intercambiar origen y destino?",
-            answer: "Si, usa el boton de intercambiar para cambiar rapidamente las zonas."
+            question: "Puedo buscar cualquier pais?",
+            answer: "Puedes buscar por pais, ciudad o nombre tecnico de zona horaria. El navegador ofrece una lista amplia de zonas internacionales."
           },
           {
             question: "Se envia algun dato?",
@@ -310,8 +310,8 @@ function getEnglishToolSeoContent(tool: Tool) {
     if (tool.slug === "hora-mundial") {
       return {
         heading: `${tool.title} free online`,
-        intro: `${tool.description} Use it to plan meetings, travel, deliveries or calls between countries without calculating time differences manually.`,
-        steps: ["Choose the source date and time.", "Select the source country or time zone.", "Select the target country or time zone.", "Check the target clock and related zones."],
+        intro: `${tool.description} Use it to plan meetings, travel, deliveries or calls without calculating time differences manually.`,
+        steps: ["Check your local time in the first clock.", "Search for a country, city or time zone.", "Select the result you want to check.", "Compare the selected time with popular zones."],
         faqs: [
           {
             question: `Can I use ${tool.title} for free?`,
@@ -326,8 +326,8 @@ function getEnglishToolSeoContent(tool: Tool) {
             answer: "Yes, the form and clocks are responsive."
           },
           {
-            question: "Can I swap source and target?",
-            answer: "Yes, use the swap button to quickly change the zones."
+            question: "Can I search any country?",
+            answer: "You can search by country, city or technical time zone name. The browser provides a broad list of international zones."
           },
           {
             question: "Is any data sent?",

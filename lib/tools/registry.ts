@@ -291,10 +291,10 @@ export const tools: Tool[] = [
     slug: "hora-mundial",
     route: "/conversor/hora-mundial",
     title: "Hora mundial",
-    h1: "Conversor de hora entre paises",
+    h1: "Hora local por pais",
     group: "Dinero y tiempo",
-    description: "Convierte una hora entre paises y zonas horarias con formato de reloj.",
-    keywords: ["hora mundial", "conversor horario", "hora entre paises", "zonas horarias"]
+    description: "Consulta tu hora local y busca la hora actual en paises, ciudades y zonas horarias.",
+    keywords: ["hora mundial", "hora local", "hora por pais", "zonas horarias"]
   },
   {
     ...converterBase,

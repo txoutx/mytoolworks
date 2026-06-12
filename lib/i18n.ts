@@ -204,9 +204,9 @@ const toolTranslations: Record<Locale, Record<string, Partial<Tool>>> = {
     },
     "hora-mundial": {
       title: "World clock",
-      h1: "Time zone converter",
+      h1: "Local time by country",
       group: "Money and time",
-      description: "Convert a time between countries and time zones with a clock-style interface."
+      description: "Check your local time and search the current time in countries, cities and time zones."
     },
     temperatura: {
       title: "Temperature",
