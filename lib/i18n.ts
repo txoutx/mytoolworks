@@ -38,7 +38,7 @@ export const ui = {
     homeImageTitle: "Imagen",
     homeImageDescription: "Edita imagenes, crea collages, cambia el lienzo, convierte formatos y descarga el resultado.",
     homeConverterTitle: "Conversores",
-    homeConverterDescription: "Convierte divisas, unidades, horas, temperatura, peso, datos digitales, area, volumen y energia.",
+    homeConverterDescription: "Convierte divisas, unidades, horas, zonas horarias, temperatura, peso, datos digitales, area, volumen y energia.",
     openPdf: "Abrir PDF",
     openImage: "Abrir imagen",
     openConverter: "Abrir conversores",
@@ -69,7 +69,7 @@ export const ui = {
     homeImageTitle: "Images",
     homeImageDescription: "Edit images, create collages, change the canvas, convert formats and download the result.",
     homeConverterTitle: "Converters",
-    homeConverterDescription: "Convert currencies, units, time, temperature, weight, digital data, area, volume and energy.",
+    homeConverterDescription: "Convert currencies, units, time zones, temperature, weight, digital data, area, volume and energy.",
     openPdf: "Open PDF",
     openImage: "Open images",
     openConverter: "Open converters",
@@ -98,7 +98,7 @@ const categoryTranslations: Record<Locale, Record<string, Partial<ToolCategory>>
       title: "Online converters",
       shortTitle: "Converters",
       navLabel: "Converters",
-      description: "Convert currencies, units, time, temperature, weight, digital data, area, volume and energy."
+      description: "Convert currencies, units, time zones, temperature, weight, digital data, area, volume and energy."
     }
   }
 };
@@ -201,6 +201,12 @@ const toolTranslations: Record<Locale, Record<string, Partial<Tool>>> = {
       h1: "Online time converter",
       group: "Money and time",
       description: "Convert seconds, minutes, hours, days, weeks, months and years."
+    },
+    "hora-mundial": {
+      title: "World clock",
+      h1: "Time zone converter",
+      group: "Money and time",
+      description: "Convert a time between countries and time zones with a clock-style interface."
     },
     temperatura: {
       title: "Temperature",

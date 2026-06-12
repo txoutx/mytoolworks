@@ -165,6 +165,35 @@ function ToolPageContent({ tool: sourceTool, locale }: { tool: Tool; locale: Loc
 function getToolSeoContent(tool: Tool, locale: Locale = "es") {
   if (locale === "en") return getEnglishToolSeoContent(tool);
   if (tool.kind === "converter") {
+    if (tool.slug === "hora-mundial") {
+      return {
+        heading: `${tool.title} gratis y online`,
+        intro: `${tool.description} Sirve para planificar reuniones, viajes, entregas o llamadas entre paises sin calcular diferencias horarias a mano.`,
+        steps: ["Elige la fecha y la hora de origen.", "Selecciona el pais o zona horaria de origen.", "Selecciona el pais o zona horaria de destino.", "Consulta el reloj de destino y las zonas relacionadas."],
+        faqs: [
+          {
+            question: `Puedo usar ${tool.title} gratis?`,
+            answer: "Si, el conversor funciona gratis desde el navegador."
+          },
+          {
+            question: "Tiene en cuenta el cambio de hora?",
+            answer: "Si, usa las zonas horarias del navegador, por lo que respeta horario de verano e invierno cuando la zona lo aplica."
+          },
+          {
+            question: "Funciona en movil?",
+            answer: "Si, el formulario y los relojes son responsive."
+          },
+          {
+            question: "Puedo intercambiar origen y destino?",
+            answer: "Si, usa el boton de intercambiar para cambiar rapidamente las zonas."
+          },
+          {
+            question: "Se envia algun dato?",
+            answer: "No. La conversion se calcula en el navegador."
+          }
+        ]
+      };
+    }
     return {
       heading: `${tool.title} gratis y online`,
       intro: `${tool.description} Es un conversor rapido para consultar equivalencias sin instalar nada y desde cualquier dispositivo.`,
@@ -278,6 +307,35 @@ function getToolSeoContent(tool: Tool, locale: Locale = "es") {
 
 function getEnglishToolSeoContent(tool: Tool) {
   if (tool.kind === "converter") {
+    if (tool.slug === "hora-mundial") {
+      return {
+        heading: `${tool.title} free online`,
+        intro: `${tool.description} Use it to plan meetings, travel, deliveries or calls between countries without calculating time differences manually.`,
+        steps: ["Choose the source date and time.", "Select the source country or time zone.", "Select the target country or time zone.", "Check the target clock and related zones."],
+        faqs: [
+          {
+            question: `Can I use ${tool.title} for free?`,
+            answer: "Yes, the converter works for free in the browser."
+          },
+          {
+            question: "Does it handle daylight saving time?",
+            answer: "Yes, it uses browser time zones, so daylight saving rules are applied when the zone uses them."
+          },
+          {
+            question: "Does it work on mobile?",
+            answer: "Yes, the form and clocks are responsive."
+          },
+          {
+            question: "Can I swap source and target?",
+            answer: "Yes, use the swap button to quickly change the zones."
+          },
+          {
+            question: "Is any data sent?",
+            answer: "No. The conversion is calculated in the browser."
+          }
+        ]
+      };
+    }
     return {
       heading: `${tool.title} free online`,
       intro: `${tool.description} A fast converter for checking equivalences without installing anything, from any device.`,

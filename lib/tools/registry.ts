@@ -61,7 +61,7 @@ export const categories: ToolCategory[] = [
     title: "Conversores online",
     shortTitle: "Conversores",
     navLabel: "Conversores",
-    description: "Convierte divisas, unidades, horas, temperatura, peso, datos digitales, area, volumen y energia."
+    description: "Convierte divisas, unidades, horas, zonas horarias, temperatura, peso, datos digitales, area, volumen y energia."
   }
 ];
 
@@ -285,6 +285,16 @@ export const tools: Tool[] = [
     group: "Dinero y tiempo",
     description: "Convierte segundos, minutos, horas, dias, semanas, meses y anos.",
     keywords: ["conversor hora", "minutos a horas", "segundos a horas"]
+  },
+  {
+    ...converterBase,
+    slug: "hora-mundial",
+    route: "/conversor/hora-mundial",
+    title: "Hora mundial",
+    h1: "Conversor de hora entre paises",
+    group: "Dinero y tiempo",
+    description: "Convierte una hora entre paises y zonas horarias con formato de reloj.",
+    keywords: ["hora mundial", "conversor horario", "hora entre paises", "zonas horarias"]
   },
   {
     ...converterBase,

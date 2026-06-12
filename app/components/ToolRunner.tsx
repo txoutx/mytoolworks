@@ -74,6 +74,7 @@ const runnerText = {
 export function ToolRunner({ tool, locale = "es" }: RunnerProps) {
   if (tool.kind === "mortgage") return <MortgageCalculator />;
   if (tool.kind === "salary") return <SalaryCalculator />;
+  if (tool.slug === "hora-mundial") return <WorldClockConverter tool={tool} locale={locale} />;
   if (tool.kind === "converter") return <UnitConverter tool={tool} locale={locale} />;
   if (tool.kind === "scientific") return <ScientificCalculator />;
   if (tool.kind === "cv") return <CvGenerator />;
@@ -930,6 +931,226 @@ function SalaryCalculator() {
       </div>
     </div>
   );
+}
+
+function WorldClockConverter({ tool, locale }: { tool: Tool; locale: Locale }) {
+  const now = new Date();
+  const [date, setDate] = useState(now.toISOString().slice(0, 10));
+  const [time, setTime] = useState(now.toTimeString().slice(0, 5));
+  const [fromZone, setFromZone] = useState("Europe/Madrid");
+  const [toZone, setToZone] = useState("America/New_York");
+  const labels = locale === "en" ? worldClockLabels.en : worldClockLabels.es;
+
+  const sourceInstant = useMemo(() => zonedTimeToUtc(date, time, fromZone), [date, fromZone, time]);
+  const fromParts = useMemo(() => getZoneParts(sourceInstant, fromZone, locale), [fromZone, locale, sourceInstant]);
+  const toParts = useMemo(() => getZoneParts(sourceInstant, toZone, locale), [locale, sourceInstant, toZone]);
+  const otherZones = useMemo(
+    () => worldClockZones.filter((zone) => zone.timeZone !== fromZone && zone.timeZone !== toZone).slice(0, 6),
+    [fromZone, toZone]
+  );
+
+  return (
+    <div className="tool-workspace world-clock-workspace">
+      <h2>{tool.title}</h2>
+      <div className="world-clock-controls">
+        <div className="field">
+          <label htmlFor="world-clock-date">{labels.date}</label>
+          <input id="world-clock-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+        </div>
+        <div className="field">
+          <label htmlFor="world-clock-time">{labels.time}</label>
+          <input id="world-clock-time" type="time" value={time} onChange={(event) => setTime(event.target.value)} />
+        </div>
+        <TimeZoneSelect id="world-clock-from" label={labels.from} value={fromZone} onChange={setFromZone} locale={locale} />
+        <button
+          className="swap-button"
+          type="button"
+          onClick={() => {
+            setFromZone(toZone);
+            setToZone(fromZone);
+          }}
+        >
+          {labels.swap}
+        </button>
+        <TimeZoneSelect id="world-clock-to" label={labels.to} value={toZone} onChange={setToZone} locale={locale} />
+      </div>
+
+      <div className="world-clock-grid">
+        <ClockCard title={labels.origin} zone={fromZone} parts={fromParts} locale={locale} />
+        <ClockCard title={labels.destination} zone={toZone} parts={toParts} locale={locale} featured />
+      </div>
+
+      <div className="world-clock-list">
+        {otherZones.map((zone) => {
+          const parts = getZoneParts(sourceInstant, zone.timeZone, locale);
+          return (
+            <div className="world-clock-row" key={zone.timeZone}>
+              <span>{locale === "en" ? zone.enLabel : zone.label}</span>
+              <strong>{parts.time}</strong>
+              <small>{parts.date}</small>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TimeZoneSelect({
+  id,
+  label,
+  value,
+  onChange,
+  locale
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  locale: Locale;
+}) {
+  return (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <select id={id} value={value} onChange={(event) => onChange(event.target.value)}>
+        {worldClockZones.map((zone) => (
+          <option value={zone.timeZone} key={zone.timeZone}>
+            {locale === "en" ? zone.enLabel : zone.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function ClockCard({
+  title,
+  zone,
+  parts,
+  locale,
+  featured = false
+}: {
+  title: string;
+  zone: string;
+  parts: ZoneParts;
+  locale: Locale;
+  featured?: boolean;
+}) {
+  const zoneLabel = worldClockZones.find((item) => item.timeZone === zone);
+  const hourAngle = ((parts.hour % 12) + parts.minute / 60) * 30;
+  const minuteAngle = parts.minute * 6;
+  return (
+    <article className={featured ? "clock-card featured" : "clock-card"}>
+      <div>
+        <span>{title}</span>
+        <h3>{zoneLabel ? (locale === "en" ? zoneLabel.enLabel : zoneLabel.label) : zone}</h3>
+      </div>
+      <div className="analog-clock" aria-hidden="true">
+        <i className="clock-mark top" />
+        <i className="clock-mark right" />
+        <i className="clock-mark bottom" />
+        <i className="clock-mark left" />
+        <b className="clock-hand hour" style={{ transform: `translateX(-50%) rotate(${hourAngle}deg)` }} />
+        <b className="clock-hand minute" style={{ transform: `translateX(-50%) rotate(${minuteAngle}deg)` }} />
+        <em />
+      </div>
+      <strong>{parts.time}</strong>
+      <small>{parts.date}</small>
+    </article>
+  );
+}
+
+type ZoneParts = {
+  time: string;
+  date: string;
+  hour: number;
+  minute: number;
+};
+
+const worldClockLabels = {
+  es: {
+    date: "Fecha",
+    time: "Hora",
+    from: "Pais / zona origen",
+    to: "Pais / zona destino",
+    swap: "Intercambiar",
+    origin: "Origen",
+    destination: "Destino"
+  },
+  en: {
+    date: "Date",
+    time: "Time",
+    from: "Source country / zone",
+    to: "Target country / zone",
+    swap: "Swap",
+    origin: "Origin",
+    destination: "Destination"
+  }
+} as const;
+
+const worldClockZones = [
+  { timeZone: "Europe/Madrid", label: "Espana - Madrid", enLabel: "Spain - Madrid" },
+  { timeZone: "Europe/London", label: "Reino Unido - Londres", enLabel: "United Kingdom - London" },
+  { timeZone: "Europe/Paris", label: "Francia - Paris", enLabel: "France - Paris" },
+  { timeZone: "Europe/Berlin", label: "Alemania - Berlin", enLabel: "Germany - Berlin" },
+  { timeZone: "America/New_York", label: "Estados Unidos - Nueva York", enLabel: "United States - New York" },
+  { timeZone: "America/Los_Angeles", label: "Estados Unidos - Los Angeles", enLabel: "United States - Los Angeles" },
+  { timeZone: "America/Mexico_City", label: "Mexico - Ciudad de Mexico", enLabel: "Mexico - Mexico City" },
+  { timeZone: "America/Bogota", label: "Colombia - Bogota", enLabel: "Colombia - Bogota" },
+  { timeZone: "America/Argentina/Buenos_Aires", label: "Argentina - Buenos Aires", enLabel: "Argentina - Buenos Aires" },
+  { timeZone: "America/Sao_Paulo", label: "Brasil - Sao Paulo", enLabel: "Brazil - Sao Paulo" },
+  { timeZone: "Asia/Dubai", label: "Emiratos - Dubai", enLabel: "UAE - Dubai" },
+  { timeZone: "Asia/Tokyo", label: "Japon - Tokio", enLabel: "Japan - Tokyo" },
+  { timeZone: "Asia/Shanghai", label: "China - Shanghai", enLabel: "China - Shanghai" },
+  { timeZone: "Asia/Kolkata", label: "India - Nueva Delhi", enLabel: "India - New Delhi" },
+  { timeZone: "Australia/Sydney", label: "Australia - Sidney", enLabel: "Australia - Sydney" }
+];
+
+function getZoneParts(date: Date, timeZone: string, locale: Locale): ZoneParts {
+  const parts = new Intl.DateTimeFormat(locale === "en" ? "en-US" : "es-ES", {
+    timeZone,
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  const hour = Number(get("hour")) % 24;
+  const minute = Number(get("minute"));
+  return {
+    time: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+    date: `${get("day")} ${get("month")} ${get("year")}`,
+    hour,
+    minute
+  };
+}
+
+function zonedTimeToUtc(date: string, time: string, timeZone: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  const offset = getTimeZoneOffsetMs(utcGuess, timeZone);
+  const firstPass = new Date(utcGuess.getTime() - offset);
+  const correctedOffset = getTimeZoneOffsetMs(firstPass, timeZone);
+  return new Date(utcGuess.getTime() - correctedOffset);
+}
+
+function getTimeZoneOffsetMs(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).formatToParts(date);
+  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? 0);
+  const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour") % 24, get("minute"), get("second"));
+  return asUtc - date.getTime();
 }
 
 function UnitConverter({ tool, locale }: { tool: Tool; locale: Locale }) {
