@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileImage, FileText } from "lucide-react";
+import { ArrowLeftRight, FileImage, FileText } from "lucide-react";
 import { AdSlot, Footer, Header } from "./components/SiteChrome";
 import type { Locale } from "../lib/i18n";
 import { ui, withLocalePath } from "../lib/i18n";
@@ -55,6 +55,20 @@ export function HomePage({ locale }: { locale: Locale }) {
                   <span>{locale === "en" ? "Watermark" : "Marca de agua"}</span>
                 </div>
                 <footer>{t.openImage}</footer>
+              </Link>
+
+              <Link href={withLocalePath("/conversor", locale)} className="home-category-card">
+                <div className="home-category-icon" aria-hidden="true">
+                  <ArrowLeftRight size={28} />
+                </div>
+                <h2>{t.homeConverterTitle}</h2>
+                <p>{t.homeConverterDescription}</p>
+                <div className="category-preview-list">
+                  <span>{locale === "en" ? "Currency" : "Divisa"}</span>
+                  <span>{locale === "en" ? "Length" : "Longitud"}</span>
+                  <span>{locale === "en" ? "Temperature" : "Temperatura"}</span>
+                </div>
+                <footer>{t.openConverter}</footer>
               </Link>
             </div>
           </div>

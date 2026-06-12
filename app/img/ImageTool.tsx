@@ -135,6 +135,7 @@ export function ImageTool({ locale = "es" }: { locale?: Locale }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const objectUrlsRef = useRef<string[]>([]);
+  const draggedLayerIdRef = useRef("");
   const dragRef = useRef<{
     mode: DragMode;
     start: PointerPoint;
@@ -150,6 +151,7 @@ export function ImageTool({ locale = "es" }: { locale?: Locale }) {
 
   const [layers, setLayers] = useState<ImageLayer[]>([]);
   const [activeLayerId, setActiveLayerId] = useState("");
+  const [draggedLayerId, setDraggedLayerId] = useState("");
   const [canvasWidth, setCanvasWidth] = useState(0);
   const [canvasHeight, setCanvasHeight] = useState(0);
   const [format, setFormat] = useState<ExportFormat>("webp");
@@ -199,7 +201,7 @@ export function ImageTool({ locale = "es" }: { locale?: Locale }) {
   }, []);
 
   function loadImage(fileList: FileList | null) {
-    const files = Array.from(fileList ?? []).filter((file) => file.type.startsWith("image/"));
+    const files = Array.from(fileList ?? []).filter(isImageFile);
     if (!files.length) {
       setMessage(locale === "en" ? "Upload one or more valid images." : "Sube una o varias imagenes validas.");
       return;
@@ -306,19 +308,34 @@ export function ImageTool({ locale = "es" }: { locale?: Locale }) {
     });
   }
 
-  function moveLayer(layerId: string, direction: "front" | "back") {
+  function dropLayer(targetLayerId: string) {
+    const sourceLayerId = draggedLayerIdRef.current || draggedLayerId;
+    if (!sourceLayerId || sourceLayerId === targetLayerId) return;
     setLayers((current) => {
       const saved = saveActiveLayer(current);
-      const index = saved.findIndex((layer) => layer.id === layerId);
-      if (index < 0) return saved;
-      const targetIndex = direction === "front" ? Math.min(saved.length - 1, index + 1) : Math.max(0, index - 1);
-      if (targetIndex === index) return saved;
+      const index = saved.findIndex((layer) => layer.id === sourceLayerId);
+      const targetIndex = saved.findIndex((layer) => layer.id === targetLayerId);
+      if (index < 0 || targetIndex < 0) return saved;
       const reordered = [...saved];
       const [layer] = reordered.splice(index, 1);
       reordered.splice(targetIndex, 0, layer);
       return reordered;
     });
+    setActiveLayerId(sourceLayerId);
+    draggedLayerIdRef.current = sourceLayerId;
+    setDraggedLayerId(sourceLayerId);
+  }
+
+  function startLayerDrag(layerId: string) {
+    draggedLayerIdRef.current = layerId;
+    setDraggedLayerId(layerId);
+    setLayers((current) => saveActiveLayer(current));
     setActiveLayerId(layerId);
+  }
+
+  function endLayerDrag() {
+    draggedLayerIdRef.current = "";
+    setDraggedLayerId("");
   }
 
   function setCanvasSize(nextWidth: number, nextHeight: number) {
@@ -668,49 +685,53 @@ export function ImageTool({ locale = "es" }: { locale?: Locale }) {
           <div className="file-list">
             {layers.map((layer, index) => (
               <div
-                className={`file-row image-layer-row${layer.id === activeLayerId ? " active" : ""}`}
+                className={`image-layer-row${layer.id === activeLayerId ? " active" : ""}${layer.id === draggedLayerId ? " dragging" : ""}`}
+                draggable
                 onClick={() => selectLayer(layer)}
+                onPointerDown={(event) => {
+                  if ((event.target as HTMLElement).closest("button")) return;
+                  startLayerDrag(layer.id);
+                }}
+                onPointerEnter={() => {
+                  if (draggedLayerIdRef.current && draggedLayerIdRef.current !== layer.id) dropLayer(layer.id);
+                }}
+                onPointerMove={() => {
+                  if (draggedLayerIdRef.current && draggedLayerIdRef.current !== layer.id) dropLayer(layer.id);
+                }}
+                onPointerUp={endLayerDrag}
+                onPointerCancel={endLayerDrag}
+                onDragStart={() => {
+                  startLayerDrag(layer.id);
+                }}
+                onDragEnter={(event) => {
+                  event.preventDefault();
+                  if (draggedLayerId && draggedLayerId !== layer.id) dropLayer(layer.id);
+                }}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  dropLayer(layer.id);
+                }}
+                onDragEnd={endLayerDrag}
                 key={layer.id}
               >
-                <FileImage size={18} aria-hidden="true" />
-                <button type="button" className="image-layer-name" onClick={() => selectLayer(layer)}>
+                <span className="image-layer-grip" aria-hidden="true">::</span>
+                <FileImage className="image-layer-icon" size={18} aria-hidden="true" />
+                <div className="image-layer-name">
                   <span>{layer.info.name}</span>
                   <small>{index === layers.length - 1 ? t.front : index === 0 ? t.background : `${t.layer} ${index + 1}`}</small>
-                </button>
-                <small>{formatFileSize(layer.info.size)}</small>
+                </div>
+                <small className="image-layer-size">{formatFileSize(layer.info.size)}</small>
                 <div className="image-layer-actions">
                   <button
                     type="button"
-                    aria-label={t.back}
-                    title={t.back}
-                    disabled={index === 0}
+                    aria-label={locale === "en" ? "Remove image" : "Quitar imagen"}
+                    className="image-layer-remove"
+                    onPointerDown={(event) => event.stopPropagation()}
                     onClick={(event) => {
                       event.stopPropagation();
-                      moveLayer(layer.id, "back");
+                      removeLayer(layer.id);
                     }}
-                  >
-                    {t.back}
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={t.front}
-                    title={t.front}
-                    disabled={index === layers.length - 1}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      moveLayer(layer.id, "front");
-                    }}
-                  >
-                    {t.front}
-                  </button>
-                  <button
-                    type="button"
-                  aria-label="Quitar imagen"
-                  className="image-layer-remove"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    removeLayer(layer.id);
-                  }}
                   >
                     <X size={16} aria-hidden="true" />
                   </button>
@@ -890,4 +911,9 @@ function distance(a: PointerPoint, b: PointerPoint) {
 
 function angleBetween(center: PointerPoint, point: PointerPoint) {
   return Math.atan2(point.y - center.y, point.x - center.x);
+}
+
+function isImageFile(file: File) {
+  if (file.type.startsWith("image/")) return true;
+  return /\.(jpe?g|png|webp|avif|gif|bmp)$/i.test(file.name);
 }

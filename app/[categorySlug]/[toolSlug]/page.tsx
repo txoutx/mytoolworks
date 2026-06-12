@@ -164,6 +164,35 @@ export function ToolPageContent({ tool: sourceTool, locale }: { tool: Tool; loca
 
 function getToolSeoContent(tool: Tool, locale: Locale = "es") {
   if (locale === "en") return getEnglishToolSeoContent(tool);
+  if (tool.kind === "converter") {
+    return {
+      heading: `${tool.title} gratis y online`,
+      intro: `${tool.description} Es un conversor rapido para consultar equivalencias sin instalar nada y desde cualquier dispositivo.`,
+      steps: ["Introduce la cantidad que quieres convertir.", "Elige la unidad o divisa de origen.", "Selecciona la unidad de destino.", "Consulta el resultado instantaneo y las conversiones rapidas."],
+      faqs: [
+        {
+          question: `Puedo usar ${tool.title} gratis?`,
+          answer: "Si, el conversor funciona gratis desde el navegador."
+        },
+        {
+          question: "Se envia algun archivo?",
+          answer: "No. Esta herramienta solo calcula valores numericos en el navegador."
+        },
+        {
+          question: "Funciona en movil?",
+          answer: "Si, el formulario es responsive y se adapta a movil, tablet y escritorio."
+        },
+        {
+          question: "Los resultados son exactos?",
+          answer: tool.slug === "divisa" ? "Las divisas son orientativas porque no se actualizan en tiempo real." : "Las conversiones usan factores estandar habituales para cada unidad."
+        },
+        {
+          question: "Puedo intercambiar origen y destino?",
+          answer: "Si, usa el boton de intercambiar para cambiar rapidamente la direccion de la conversion."
+        }
+      ]
+    };
+  }
   const baseSteps = [
     tool.input === "html" ? "Pega la URL que quieres convertir." : "Sube el archivo desde tu dispositivo.",
     "Revisa la vista previa y ajusta las opciones disponibles.",
@@ -248,6 +277,35 @@ function getToolSeoContent(tool: Tool, locale: Locale = "es") {
 }
 
 function getEnglishToolSeoContent(tool: Tool) {
+  if (tool.kind === "converter") {
+    return {
+      heading: `${tool.title} free online`,
+      intro: `${tool.description} A fast converter for checking equivalences without installing anything, from any device.`,
+      steps: ["Enter the amount you want to convert.", "Choose the source unit or currency.", "Select the target unit.", "Check the instant result and quick conversions."],
+      faqs: [
+        {
+          question: `Can I use ${tool.title} for free?`,
+          answer: "Yes, the converter works for free in the browser."
+        },
+        {
+          question: "Is any file uploaded?",
+          answer: "No. This tool only calculates numeric values in the browser."
+        },
+        {
+          question: "Does it work on mobile?",
+          answer: "Yes, the form is responsive and adapts to mobile, tablet and desktop."
+        },
+        {
+          question: "Are the results exact?",
+          answer: tool.slug === "divisa" ? "Currency values are indicative because they are not updated in real time." : "Conversions use common standard factors for each unit."
+        },
+        {
+          question: "Can I swap source and target?",
+          answer: "Yes, use the swap button to quickly change the conversion direction."
+        }
+      ]
+    };
+  }
   const baseSteps = [
     tool.input === "html" ? "Paste the URL you want to convert." : "Upload the file from your device.",
     "Check the preview and adjust the available options.",

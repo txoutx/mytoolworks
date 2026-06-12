@@ -12,8 +12,13 @@ export const metadata: Metadata = {
     "Herramientas online rapidas para PDF, calculadoras, conversores, textos, CV y documentos.",
   applicationName: "MyToolWorks",
   icons: {
-    icon: "/icono.png",
-    apple: "/icono.png"
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-192x192.png", sizes: "192x192", type: "image/png" }
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png"
   },
   alternates: {
     canonical: "/"
@@ -38,6 +43,13 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <head>
+        <script
+          id="Cookiebot"
+          src="https://consent.cookiebot.com/uc.js"
+          data-cbid="d4c7dab5-5b5d-4327-98fc-047ac5f022ea"
+          data-blockingmode="auto"
+          type="text/javascript"
+        ></script>
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-4ZTWW5XPZ1"></script>
         <script
           dangerouslySetInnerHTML={{

@@ -74,7 +74,7 @@ const runnerText = {
 export function ToolRunner({ tool, locale = "es" }: RunnerProps) {
   if (tool.kind === "mortgage") return <MortgageCalculator />;
   if (tool.kind === "salary") return <SalaryCalculator />;
-  if (tool.kind === "units") return <UnitConverter />;
+  if (tool.kind === "converter") return <UnitConverter tool={tool} locale={locale} />;
   if (tool.kind === "scientific") return <ScientificCalculator />;
   if (tool.kind === "cv") return <CvGenerator />;
   if (tool.kind === "letter") return <LetterGenerator />;
@@ -932,37 +932,350 @@ function SalaryCalculator() {
   );
 }
 
-function UnitConverter() {
-  const [type, setType] = useState("length");
+function UnitConverter({ tool, locale }: { tool: Tool; locale: Locale }) {
+  const config = converterConfigs[tool.slug] ?? converterConfigs.longitud;
   const [value, setValue] = useState(1);
+  const [from, setFrom] = useState(config.defaultFrom);
+  const [to, setTo] = useState(config.defaultTo);
+  const [currencyRates, setCurrencyRates] = useState<Record<string, number>>({});
+  const [currencyDate, setCurrencyDate] = useState("");
+  const [currencyStatus, setCurrencyStatus] = useState<"idle" | "loading" | "live" | "fallback">("idle");
 
-  const converted = useMemo(() => {
-    if (type === "length") return `${(value * 3.28084).toFixed(4)} pies`;
-    if (type === "weight") return `${(value * 2.20462).toFixed(4)} libras`;
-    if (type === "temperature") return `${((value * 9) / 5 + 32).toFixed(2)} grados Fahrenheit`;
-    return `${(value * 0.264172).toFixed(4)} galones US`;
-  }, [type, value]);
+  useEffect(() => {
+    setValue(1);
+    setFrom(config.defaultFrom);
+    setTo(config.defaultTo);
+  }, [config.defaultFrom, config.defaultTo]);
+
+  const fromUnit = config.units.find((unit) => unit.id === from) ?? config.units[0];
+  const toUnit = config.units.find((unit) => unit.id === to) ?? config.units[1] ?? config.units[0];
+  const isCurrency = tool.slug === "divisa";
+  const result = useMemo(() => {
+    if (isCurrency) return convertCurrencyValue(value, fromUnit, toUnit, currencyRates, config);
+    return config.convert(value, fromUnit, toUnit);
+  }, [config, currencyRates, fromUnit, isCurrency, toUnit, value]);
+  const quickResults = useMemo(
+    () =>
+      config.units
+        .filter((unit) => unit.id !== from)
+        .slice(0, 7)
+        .map((unit) => ({
+          unit,
+          value: isCurrency ? convertCurrencyValue(value, fromUnit, unit, currencyRates, config) : config.convert(value, fromUnit, unit)
+        })),
+    [config, currencyRates, from, fromUnit, isCurrency, value]
+  );
+  const labels = locale === "en" ? converterLabels.en : converterLabels.es;
+
+  useEffect(() => {
+    if (!isCurrency) return;
+    let cancelled = false;
+    const controller = new AbortController();
+
+    async function loadRates() {
+      setCurrencyStatus("loading");
+      try {
+        const base = fromUnit.symbol.toUpperCase();
+        const quotes = config.units
+          .map((unit) => unit.symbol.toUpperCase())
+          .filter((symbol) => symbol !== base)
+          .join(",");
+        const response = await fetch(`/api/currency?base=${base}&quotes=${quotes}`, {
+          signal: controller.signal
+        });
+        if (!response.ok) throw new Error("Currency API error");
+        const data = (await response.json()) as { date?: string; rates?: Record<string, number> };
+        if (cancelled) return;
+        setCurrencyRates(
+          Object.fromEntries(
+            Object.entries(data.rates ?? {}).map(([code, rate]) => [code.toLowerCase(), rate])
+          )
+        );
+        setCurrencyDate(data.date ?? "");
+        setCurrencyStatus("live");
+      } catch {
+        if (!cancelled) setCurrencyStatus("fallback");
+      }
+    }
+
+    loadRates();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [config.units, fromUnit.symbol, isCurrency]);
 
   return (
-    <div className="tool-workspace">
-      <h2>Convierte unidades</h2>
-      <div className="form-grid">
-        <div className="field">
-          <label htmlFor="unit-type">Tipo</label>
-          <select id="unit-type" value={type} onChange={(event) => setType(event.target.value)}>
-            <option value="length">Metros a pies</option>
-            <option value="weight">Kilogramos a libras</option>
-            <option value="temperature">Celsius a Fahrenheit</option>
-            <option value="volume">Litros a galones</option>
-          </select>
+    <div className="tool-workspace converter-workspace">
+      <h2>{tool.title}</h2>
+      <div className="converter-panel">
+        <div className="converter-main">
+          <NumberField label={labels.amount} value={value} onChange={setValue} step={config.step ?? 0.01} />
+          <div className="field">
+            <label htmlFor="converter-from">{labels.from}</label>
+            <select id="converter-from" value={from} onChange={(event) => setFrom(event.target.value)}>
+              {config.units.map((unit) => (
+                <option value={unit.id} key={unit.id}>
+                  {locale === "en" && unit.enLabel ? unit.enLabel : unit.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            className="swap-button"
+            type="button"
+            onClick={() => {
+              setFrom(to);
+              setTo(from);
+            }}
+          >
+            {labels.swap}
+          </button>
+          <div className="field">
+            <label htmlFor="converter-to">{labels.to}</label>
+            <select id="converter-to" value={to} onChange={(event) => setTo(event.target.value)}>
+              {config.units.map((unit) => (
+                <option value={unit.id} key={unit.id}>
+                  {locale === "en" && unit.enLabel ? unit.enLabel : unit.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <NumberField label="Valor" value={value} onChange={setValue} step={0.01} />
-        <div className="result-box">
-          <strong>Resultado: {converted}</strong>
+        <div className="converter-result">
+          <span>{labels.result}</span>
+          <strong>{formatConverterNumber(result)} {toUnit.symbol}</strong>
+          <small>
+            {formatConverterNumber(value)} {fromUnit.symbol} = {formatConverterNumber(result)} {toUnit.symbol}
+          </small>
         </div>
       </div>
+      <div className="converter-table" aria-label={labels.quick}>
+        {quickResults.map(({ unit, value: converted }) => (
+          <div className="converter-row" key={unit.id}>
+            <span>{locale === "en" && unit.enLabel ? unit.enLabel : unit.label}</span>
+            <strong>
+              {formatConverterNumber(converted)} {unit.symbol}
+            </strong>
+          </div>
+        ))}
+      </div>
+      {isCurrency && (
+        <p className={`converter-note currency-note ${currencyStatus}`}>
+          {currencyStatus === "live"
+            ? locale === "en"
+              ? `Live exchange rates loaded from Frankfurter${currencyDate ? `, date ${currencyDate}` : ""}.`
+              : `Tipos de cambio actualizados desde Frankfurter${currencyDate ? `, fecha ${currencyDate}` : ""}.`
+            : currencyStatus === "loading"
+              ? locale === "en"
+                ? "Updating exchange rates..."
+                : "Actualizando tipos de cambio..."
+              : locale === "en"
+                ? "Could not update rates. Showing fallback reference values."
+                : "No se pudieron actualizar los cambios. Mostrando valores orientativos de respaldo."}
+        </p>
+      )}
+      {config.note && !isCurrency && <p className="converter-note">{locale === "en" && config.enNote ? config.enNote : config.note}</p>}
     </div>
   );
+}
+
+type ConverterUnit = {
+  id: string;
+  label: string;
+  enLabel?: string;
+  symbol: string;
+  factor?: number;
+  toBase?: (value: number) => number;
+  fromBase?: (value: number) => number;
+};
+
+type ConverterConfig = {
+  defaultFrom: string;
+  defaultTo: string;
+  step?: number;
+  units: ConverterUnit[];
+  note?: string;
+  enNote?: string;
+  convert: (value: number, from: ConverterUnit, to: ConverterUnit) => number;
+};
+
+const converterLabels = {
+  es: {
+    amount: "Cantidad",
+    from: "De",
+    to: "A",
+    swap: "Intercambiar",
+    result: "Resultado",
+    quick: "Conversiones rapidas"
+  },
+  en: {
+    amount: "Amount",
+    from: "From",
+    to: "To",
+    swap: "Swap",
+    result: "Result",
+    quick: "Quick conversions"
+  }
+} as const;
+
+function factorConverter(units: ConverterUnit[]): ConverterConfig["convert"] {
+  return (value, from, to) => (value * (from.factor ?? 1)) / (to.factor ?? 1);
+}
+
+function customConverter(value: number, from: ConverterUnit, to: ConverterUnit) {
+  const base = from.toBase ? from.toBase(value) : value * (from.factor ?? 1);
+  return to.fromBase ? to.fromBase(base) : base / (to.factor ?? 1);
+}
+
+function convertCurrencyValue(
+  value: number,
+  from: ConverterUnit,
+  to: ConverterUnit,
+  liveRates: Record<string, number>,
+  config: ConverterConfig
+) {
+  if (from.id === to.id) return value;
+  const liveRate = liveRates[to.id];
+  if (Number.isFinite(liveRate)) return value * liveRate;
+  return config.convert(value, from, to);
+}
+
+const converterConfigs: Record<string, ConverterConfig> = {
+  divisa: (() => {
+    const units: ConverterUnit[] = [
+      { id: "eur", label: "Euro", enLabel: "Euro", symbol: "EUR", factor: 1 },
+      { id: "usd", label: "Dolar estadounidense", enLabel: "US dollar", symbol: "USD", factor: 0.92 },
+      { id: "gbp", label: "Libra esterlina", enLabel: "British pound", symbol: "GBP", factor: 1.17 },
+      { id: "chf", label: "Franco suizo", enLabel: "Swiss franc", symbol: "CHF", factor: 1.06 },
+      { id: "jpy", label: "Yen japones", enLabel: "Japanese yen", symbol: "JPY", factor: 0.0059 },
+      { id: "cad", label: "Dolar canadiense", enLabel: "Canadian dollar", symbol: "CAD", factor: 0.67 },
+      { id: "aud", label: "Dolar australiano", enLabel: "Australian dollar", symbol: "AUD", factor: 0.61 },
+      { id: "mxn", label: "Peso mexicano", enLabel: "Mexican peso", symbol: "MXN", factor: 0.050 }
+    ];
+    return {
+      defaultFrom: "eur",
+      defaultTo: "usd",
+      step: 0.01,
+      units,
+      note: "Los tipos de cambio son orientativos y no se actualizan en tiempo real.",
+      enNote: "Exchange rates are indicative and are not updated in real time.",
+      convert: factorConverter(units)
+    };
+  })(),
+  longitud: (() => {
+    const units: ConverterUnit[] = [
+      { id: "m", label: "Metro", enLabel: "Meter", symbol: "m", factor: 1 },
+      { id: "km", label: "Kilometro", enLabel: "Kilometer", symbol: "km", factor: 1000 },
+      { id: "cm", label: "Centimetro", enLabel: "Centimeter", symbol: "cm", factor: 0.01 },
+      { id: "mm", label: "Milimetro", enLabel: "Millimeter", symbol: "mm", factor: 0.001 },
+      { id: "mi", label: "Milla", enLabel: "Mile", symbol: "mi", factor: 1609.344 },
+      { id: "yd", label: "Yarda", enLabel: "Yard", symbol: "yd", factor: 0.9144 },
+      { id: "ft", label: "Pie", enLabel: "Foot", symbol: "ft", factor: 0.3048 },
+      { id: "in", label: "Pulgada", enLabel: "Inch", symbol: "in", factor: 0.0254 }
+    ];
+    return { defaultFrom: "m", defaultTo: "ft", units, convert: factorConverter(units) };
+  })(),
+  hora: (() => {
+    const units: ConverterUnit[] = [
+      { id: "s", label: "Segundo", enLabel: "Second", symbol: "s", factor: 1 },
+      { id: "min", label: "Minuto", enLabel: "Minute", symbol: "min", factor: 60 },
+      { id: "h", label: "Hora", enLabel: "Hour", symbol: "h", factor: 3600 },
+      { id: "d", label: "Dia", enLabel: "Day", symbol: "d", factor: 86400 },
+      { id: "wk", label: "Semana", enLabel: "Week", symbol: "sem", factor: 604800 },
+      { id: "mo", label: "Mes medio", enLabel: "Average month", symbol: "mes", factor: 2629800 },
+      { id: "yr", label: "Ano medio", enLabel: "Average year", symbol: "ano", factor: 31557600 }
+    ];
+    return { defaultFrom: "h", defaultTo: "min", units, convert: factorConverter(units) };
+  })(),
+  temperatura: (() => {
+    const units: ConverterUnit[] = [
+      { id: "c", label: "Celsius", symbol: "°C", toBase: (value) => value + 273.15, fromBase: (value) => value - 273.15 },
+      { id: "f", label: "Fahrenheit", symbol: "°F", toBase: (value) => ((value - 32) * 5) / 9 + 273.15, fromBase: (value) => ((value - 273.15) * 9) / 5 + 32 },
+      { id: "k", label: "Kelvin", symbol: "K", toBase: (value) => value, fromBase: (value) => value }
+    ];
+    return { defaultFrom: "c", defaultTo: "f", step: 0.1, units, convert: customConverter };
+  })(),
+  peso: (() => {
+    const units: ConverterUnit[] = [
+      { id: "kg", label: "Kilogramo", enLabel: "Kilogram", symbol: "kg", factor: 1 },
+      { id: "g", label: "Gramo", enLabel: "Gram", symbol: "g", factor: 0.001 },
+      { id: "t", label: "Tonelada", enLabel: "Tonne", symbol: "t", factor: 1000 },
+      { id: "lb", label: "Libra", enLabel: "Pound", symbol: "lb", factor: 0.45359237 },
+      { id: "oz", label: "Onza", enLabel: "Ounce", symbol: "oz", factor: 0.028349523125 },
+      { id: "st", label: "Stone", symbol: "st", factor: 6.35029318 }
+    ];
+    return { defaultFrom: "kg", defaultTo: "lb", units, convert: factorConverter(units) };
+  })(),
+  "datos-digitales": (() => {
+    const units: ConverterUnit[] = [
+      { id: "b", label: "Byte", symbol: "B", factor: 1 },
+      { id: "kb", label: "Kilobyte", symbol: "KB", factor: 1000 },
+      { id: "mb", label: "Megabyte", symbol: "MB", factor: 1000 ** 2 },
+      { id: "gb", label: "Gigabyte", symbol: "GB", factor: 1000 ** 3 },
+      { id: "tb", label: "Terabyte", symbol: "TB", factor: 1000 ** 4 },
+      { id: "kib", label: "Kibibyte", symbol: "KiB", factor: 1024 },
+      { id: "mib", label: "Mebibyte", symbol: "MiB", factor: 1024 ** 2 },
+      { id: "gib", label: "Gibibyte", symbol: "GiB", factor: 1024 ** 3 }
+    ];
+    return { defaultFrom: "mb", defaultTo: "gb", units, convert: factorConverter(units) };
+  })(),
+  capacidad: (() => {
+    const units: ConverterUnit[] = [
+      { id: "l", label: "Litro", enLabel: "Liter", symbol: "l", factor: 1 },
+      { id: "ml", label: "Mililitro", enLabel: "Milliliter", symbol: "ml", factor: 0.001 },
+      { id: "m3", label: "Metro cubico", enLabel: "Cubic meter", symbol: "m³", factor: 1000 },
+      { id: "gal-us", label: "Galon US", enLabel: "US gallon", symbol: "gal US", factor: 3.785411784 },
+      { id: "gal-uk", label: "Galon imperial", enLabel: "Imperial gallon", symbol: "gal UK", factor: 4.54609 },
+      { id: "pt", label: "Pinta US", enLabel: "US pint", symbol: "pt", factor: 0.473176473 },
+      { id: "cup", label: "Taza US", enLabel: "US cup", symbol: "cup", factor: 0.2365882365 },
+      { id: "floz", label: "Onza liquida US", enLabel: "US fluid ounce", symbol: "fl oz", factor: 0.0295735295625 }
+    ];
+    return { defaultFrom: "l", defaultTo: "ml", units, convert: factorConverter(units) };
+  })(),
+  area: (() => {
+    const units: ConverterUnit[] = [
+      { id: "m2", label: "Metro cuadrado", enLabel: "Square meter", symbol: "m²", factor: 1 },
+      { id: "km2", label: "Kilometro cuadrado", enLabel: "Square kilometer", symbol: "km²", factor: 1000000 },
+      { id: "cm2", label: "Centimetro cuadrado", enLabel: "Square centimeter", symbol: "cm²", factor: 0.0001 },
+      { id: "ha", label: "Hectarea", enLabel: "Hectare", symbol: "ha", factor: 10000 },
+      { id: "ft2", label: "Pie cuadrado", enLabel: "Square foot", symbol: "ft²", factor: 0.09290304 },
+      { id: "yd2", label: "Yarda cuadrada", enLabel: "Square yard", symbol: "yd²", factor: 0.83612736 },
+      { id: "acre", label: "Acre", symbol: "ac", factor: 4046.8564224 }
+    ];
+    return { defaultFrom: "m2", defaultTo: "ft2", units, convert: factorConverter(units) };
+  })(),
+  volumen: (() => {
+    const units: ConverterUnit[] = [
+      { id: "m3", label: "Metro cubico", enLabel: "Cubic meter", symbol: "m³", factor: 1 },
+      { id: "cm3", label: "Centimetro cubico", enLabel: "Cubic centimeter", symbol: "cm³", factor: 0.000001 },
+      { id: "l", label: "Litro", enLabel: "Liter", symbol: "l", factor: 0.001 },
+      { id: "ml", label: "Mililitro", enLabel: "Milliliter", symbol: "ml", factor: 0.000001 },
+      { id: "ft3", label: "Pie cubico", enLabel: "Cubic foot", symbol: "ft³", factor: 0.028316846592 },
+      { id: "in3", label: "Pulgada cubica", enLabel: "Cubic inch", symbol: "in³", factor: 0.000016387064 },
+      { id: "yd3", label: "Yarda cubica", enLabel: "Cubic yard", symbol: "yd³", factor: 0.764554857984 }
+    ];
+    return { defaultFrom: "m3", defaultTo: "l", units, convert: factorConverter(units) };
+  })(),
+  energia: (() => {
+    const units: ConverterUnit[] = [
+      { id: "j", label: "Julio", enLabel: "Joule", symbol: "J", factor: 1 },
+      { id: "kj", label: "Kilojulio", enLabel: "Kilojoule", symbol: "kJ", factor: 1000 },
+      { id: "cal", label: "Caloria", enLabel: "Calorie", symbol: "cal", factor: 4.184 },
+      { id: "kcal", label: "Kilocaloria", enLabel: "Kilocalorie", symbol: "kcal", factor: 4184 },
+      { id: "wh", label: "Vatio hora", enLabel: "Watt-hour", symbol: "Wh", factor: 3600 },
+      { id: "kwh", label: "Kilovatio hora", enLabel: "Kilowatt-hour", symbol: "kWh", factor: 3600000 },
+      { id: "btu", label: "BTU", symbol: "BTU", factor: 1055.05585262 }
+    ];
+    return { defaultFrom: "kwh", defaultTo: "j", units, convert: factorConverter(units) };
+  })()
+};
+
+function formatConverterNumber(value: number) {
+  if (!Number.isFinite(value)) return "0";
+  return new Intl.NumberFormat("es-ES", {
+    maximumFractionDigits: Math.abs(value) >= 1000 ? 2 : 6
+  }).format(value);
 }
 
 function ScientificCalculator() {

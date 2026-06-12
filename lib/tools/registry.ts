@@ -1,10 +1,10 @@
-export type ToolCategorySlug = "pdf" | "img";
+export type ToolCategorySlug = "pdf" | "img" | "conversor";
 
 export type ToolKind =
   | "pdf"
   | "mortgage"
   | "salary"
-  | "units"
+  | "converter"
   | "scientific"
   | "cv"
   | "letter"
@@ -37,7 +37,7 @@ export type Tool = {
   kind: ToolKind;
   processing: ProcessingMode;
   input: "single-file" | "multi-file" | "office-file" | "html";
-  output: "pdf" | "jpg" | "text" | "calculation";
+    output: "pdf" | "jpg" | "text" | "calculation";
   adProfile: AdProfile;
 };
 
@@ -55,6 +55,13 @@ export const categories: ToolCategory[] = [
     shortTitle: "Imagen",
     navLabel: "Imagen",
     description: "Edita, comprime, convierte, redimensiona y descarga imagenes desde el navegador."
+  },
+  {
+    slug: "conversor",
+    title: "Conversores online",
+    shortTitle: "Conversores",
+    navLabel: "Conversores",
+    description: "Convierte divisas, unidades, horas, temperatura, peso, datos digitales, area, volumen y energia."
   }
 ];
 
@@ -62,6 +69,16 @@ const pdfBase = {
   categorySlug: "pdf" as const,
   kind: "pdf" as const,
   adProfile: "standard" as const
+};
+
+const converterBase = {
+  categorySlug: "conversor" as const,
+  kind: "converter" as const,
+  status: "Disponible" as const,
+  processing: "client" as const,
+  input: "single-file" as const,
+  output: "calculation" as const,
+  adProfile: "light" as const
 };
 
 export const tools: Tool[] = [
@@ -238,6 +255,106 @@ export const tools: Tool[] = [
     processing: "client",
     input: "single-file",
     output: "pdf"
+  },
+  {
+    ...converterBase,
+    slug: "divisa",
+    route: "/conversor/divisa",
+    title: "Conversor de divisa",
+    h1: "Conversor de divisa online",
+    group: "Dinero y tiempo",
+    description: "Convierte importes entre EUR, USD, GBP, CHF, JPY y otras divisas habituales.",
+    keywords: ["conversor divisa", "convertir moneda", "eur usd"]
+  },
+  {
+    ...converterBase,
+    slug: "longitud",
+    route: "/conversor/longitud",
+    title: "Unidades de longitud",
+    h1: "Conversor de longitud",
+    group: "Medidas",
+    description: "Convierte metros, kilometros, centimetros, millas, yardas, pies y pulgadas.",
+    keywords: ["conversor longitud", "metros a pies", "km a millas"]
+  },
+  {
+    ...converterBase,
+    slug: "hora",
+    route: "/conversor/hora",
+    title: "Conversor de hora",
+    h1: "Conversor de hora online",
+    group: "Dinero y tiempo",
+    description: "Convierte segundos, minutos, horas, dias, semanas, meses y anos.",
+    keywords: ["conversor hora", "minutos a horas", "segundos a horas"]
+  },
+  {
+    ...converterBase,
+    slug: "temperatura",
+    route: "/conversor/temperatura",
+    title: "Temperatura",
+    h1: "Conversor de temperatura",
+    group: "Ciencia",
+    description: "Convierte Celsius, Fahrenheit y Kelvin con calculo instantaneo.",
+    keywords: ["conversor temperatura", "celsius fahrenheit", "kelvin"]
+  },
+  {
+    ...converterBase,
+    slug: "peso",
+    route: "/conversor/peso",
+    title: "Peso y masa",
+    h1: "Conversor de peso",
+    group: "Medidas",
+    description: "Convierte kilogramos, gramos, toneladas, libras, onzas y stones.",
+    keywords: ["conversor peso", "kg a libras", "gramos a onzas"]
+  },
+  {
+    ...converterBase,
+    slug: "datos-digitales",
+    route: "/conversor/datos-digitales",
+    title: "Datos digitales",
+    h1: "Conversor de datos digitales",
+    group: "Digital",
+    description: "Convierte bytes, KB, MB, GB, TB y unidades binarias como KiB, MiB y GiB.",
+    keywords: ["conversor datos", "mb a gb", "bytes a megabytes"]
+  },
+  {
+    ...converterBase,
+    slug: "capacidad",
+    route: "/conversor/capacidad",
+    title: "ml, l y capacidad",
+    h1: "Conversor de ml, litros y capacidad",
+    group: "Medidas",
+    description: "Convierte mililitros, litros, metros cubicos, galones, pintas, tazas y onzas liquidas.",
+    keywords: ["ml a litros", "litros a galones", "conversor capacidad"]
+  },
+  {
+    ...converterBase,
+    slug: "area",
+    route: "/conversor/area",
+    title: "Area",
+    h1: "Conversor de area",
+    group: "Superficies",
+    description: "Convierte metros cuadrados, hectareas, kilometros cuadrados, pies cuadrados y acres.",
+    keywords: ["conversor area", "m2 a hectareas", "pies cuadrados"]
+  },
+  {
+    ...converterBase,
+    slug: "volumen",
+    route: "/conversor/volumen",
+    title: "Volumen",
+    h1: "Conversor de volumen",
+    group: "Superficies",
+    description: "Convierte metros cubicos, centimetros cubicos, litros, pies cubicos y pulgadas cubicas.",
+    keywords: ["conversor volumen", "m3 a litros", "pies cubicos"]
+  },
+  {
+    ...converterBase,
+    slug: "energia",
+    route: "/conversor/energia",
+    title: "Energia",
+    h1: "Conversor de energia",
+    group: "Ciencia",
+    description: "Convierte julios, kilojulios, calorias, kilocalorias, Wh, kWh y BTU.",
+    keywords: ["conversor energia", "julios a calorias", "kwh a joules"]
   }
 ];
 

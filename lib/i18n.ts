@@ -18,6 +18,7 @@ export const ui = {
   es: {
     navPdf: "PDF",
     navImage: "Imagen",
+    navConverter: "Conversores",
     footerTagline: "Herramientas online rapidas y limpias. Hecho por txoutx.",
     privacy: "Privacidad",
     cookies: "Cookies",
@@ -32,12 +33,15 @@ export const ui = {
     sideAd: "Anuncio lateral",
     related: "Relacionadas",
     homeEyebrow: "Herramientas online",
-    homeLead: "Elige una categoria y trabaja con PDFs o imagenes directamente desde el navegador.",
+    homeLead: "Elige una categoria y trabaja con PDFs, imagenes o conversores directamente desde el navegador.",
     homePdfDescription: "Une, divide, comprime, rota, ordena, convierte a imagen y firma archivos PDF.",
     homeImageTitle: "Imagen",
     homeImageDescription: "Edita imagenes, crea collages, cambia el lienzo, convierte formatos y descarga el resultado.",
+    homeConverterTitle: "Conversores",
+    homeConverterDescription: "Convierte divisas, unidades, horas, temperatura, peso, datos digitales, area, volumen y energia.",
     openPdf: "Abrir PDF",
     openImage: "Abrir imagen",
+    openConverter: "Abrir conversores",
     imageEyebrow: "Imagen",
     imageTitle: "Herramientas de imagen online",
     imageLead: "Edita, combina, comprime, convierte, redimensiona y descarga imagenes directamente desde el navegador."
@@ -45,6 +49,7 @@ export const ui = {
   en: {
     navPdf: "PDF",
     navImage: "Images",
+    navConverter: "Converters",
     footerTagline: "Fast, clean online tools. Made by txoutx.",
     privacy: "Privacy",
     cookies: "Cookies",
@@ -59,12 +64,15 @@ export const ui = {
     sideAd: "Side ad",
     related: "Related tools",
     homeEyebrow: "Online tools",
-    homeLead: "Choose a category and work with PDFs or images directly in your browser.",
+    homeLead: "Choose a category and work with PDFs, images or converters directly in your browser.",
     homePdfDescription: "Merge, split, compress, rotate, reorder, convert to images and sign PDF files.",
     homeImageTitle: "Images",
     homeImageDescription: "Edit images, create collages, change the canvas, convert formats and download the result.",
+    homeConverterTitle: "Converters",
+    homeConverterDescription: "Convert currencies, units, time, temperature, weight, digital data, area, volume and energy.",
     openPdf: "Open PDF",
     openImage: "Open images",
+    openConverter: "Open converters",
     imageEyebrow: "Images",
     imageTitle: "Online image tools",
     imageLead: "Edit, combine, compress, convert, resize and download images directly from your browser."
@@ -85,6 +93,12 @@ const categoryTranslations: Record<Locale, Record<string, Partial<ToolCategory>>
       shortTitle: "Images",
       navLabel: "Images",
       description: "Edit, compress, convert, resize and download images from your browser."
+    },
+    conversor: {
+      title: "Online converters",
+      shortTitle: "Converters",
+      navLabel: "Converters",
+      description: "Convert currencies, units, time, temperature, weight, digital data, area, volume and energy."
     }
   }
 };
@@ -169,6 +183,66 @@ const toolTranslations: Record<Locale, Record<string, Partial<Tool>>> = {
       h1: "Sign PDF online",
       group: "Sign",
       description: "Draw one or more signatures and place them visually on the PDF."
+    },
+    divisa: {
+      title: "Currency converter",
+      h1: "Online currency converter",
+      group: "Money and time",
+      description: "Convert amounts between EUR, USD, GBP, CHF, JPY and other common currencies."
+    },
+    longitud: {
+      title: "Length units",
+      h1: "Length converter",
+      group: "Measurements",
+      description: "Convert meters, kilometers, centimeters, miles, yards, feet and inches."
+    },
+    hora: {
+      title: "Time converter",
+      h1: "Online time converter",
+      group: "Money and time",
+      description: "Convert seconds, minutes, hours, days, weeks, months and years."
+    },
+    temperatura: {
+      title: "Temperature",
+      h1: "Temperature converter",
+      group: "Science",
+      description: "Convert Celsius, Fahrenheit and Kelvin instantly."
+    },
+    peso: {
+      title: "Weight and mass",
+      h1: "Weight converter",
+      group: "Measurements",
+      description: "Convert kilograms, grams, tonnes, pounds, ounces and stones."
+    },
+    "datos-digitales": {
+      title: "Digital data",
+      h1: "Digital data converter",
+      group: "Digital",
+      description: "Convert bytes, KB, MB, GB, TB and binary units such as KiB, MiB and GiB."
+    },
+    capacidad: {
+      title: "ml, l and capacity",
+      h1: "ml, liters and capacity converter",
+      group: "Measurements",
+      description: "Convert milliliters, liters, cubic meters, gallons, pints, cups and fluid ounces."
+    },
+    area: {
+      title: "Area",
+      h1: "Area converter",
+      group: "Surfaces",
+      description: "Convert square meters, hectares, square kilometers, square feet and acres."
+    },
+    volumen: {
+      title: "Volume",
+      h1: "Volume converter",
+      group: "Surfaces",
+      description: "Convert cubic meters, cubic centimeters, liters, cubic feet and cubic inches."
+    },
+    energia: {
+      title: "Energy",
+      h1: "Energy converter",
+      group: "Science",
+      description: "Convert joules, kilojoules, calories, kilocalories, Wh, kWh and BTU."
     }
   }
 };

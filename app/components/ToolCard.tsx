@@ -2,9 +2,15 @@ import Link from "next/link";
 import type { ComponentType } from "react";
 import {
   ArrowRight,
+  ArrowLeftRight,
+  Binary,
   BookText,
+  Box,
   Combine,
   Crop,
+  Clock3,
+  Coins,
+  Droplets,
   FileText,
   FileImage,
   FileSpreadsheet,
@@ -15,24 +21,30 @@ import {
   Languages,
   Lock,
   LockKeyhole,
+  Map,
   Minimize2,
   PenTool,
   Presentation,
+  Ruler,
   RotateCw,
   ScanText,
   Scissors,
   Shield,
   Split,
   Stamp,
+  Thermometer,
   UnlockKeyhole,
-  Wrench
+  Weight,
+  Wrench,
+  Zap as ZapIcon
 } from "lucide-react";
 import type { Tool, ToolKind } from "../data/tools";
 import type { Locale } from "../../lib/i18n";
 import { ui } from "../../lib/i18n";
 
 const iconMap: Partial<Record<ToolKind, ComponentType<{ size?: number; className?: string }>>> = {
-  pdf: FileText
+  pdf: FileText,
+  converter: ArrowLeftRight
 };
 
 const toolIconMap: Record<string, ComponentType<{ size?: number; className?: string }>> = {
@@ -62,7 +74,17 @@ const toolIconMap: Record<string, ComponentType<{ size?: number; className?: str
   "recortar-pdf": Scissors,
   "formularios-pdf": FormInput,
   "resumir-pdf": BookText,
-  "traducir-pdf": Languages
+  "traducir-pdf": Languages,
+  divisa: Coins,
+  longitud: Ruler,
+  hora: Clock3,
+  temperatura: Thermometer,
+  peso: Weight,
+  "datos-digitales": Binary,
+  capacidad: Droplets,
+  area: Map,
+  volumen: Box,
+  energia: ZapIcon
 };
 
 const pdfAccentByGroup: Record<string, string> = {
@@ -121,6 +143,7 @@ export function ToolCard({
 function getAccent(tool: Tool) {
   if (tool.categorySlug === "pdf") return pdfAccentByGroup[tool.group] ?? pdfAccentByGroup[spanishGroup(tool.group)] ?? "coral";
   if (tool.categorySlug === "img") return "blue";
+  if (tool.categorySlug === "conversor") return "green";
   return "yellow";
 }
 
