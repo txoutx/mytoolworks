@@ -26,7 +26,7 @@ export default function ImagePage() {
             <p className="eyebrow">Imagen</p>
             <h1>Herramientas de imagen online</h1>
             <p className="lead">
-              Edita, comprime, convierte, redimensiona y descarga imagenes directamente desde el navegador.
+              Edita, combina, comprime, convierte, redimensiona y descarga imagenes directamente desde el navegador.
             </p>
           </div>
         </section>
@@ -50,8 +50,9 @@ export default function ImagePage() {
             <div className="article tool-seo-content">
               <h2>Que puedes hacer</h2>
               <p>
-                Puedes cambiar el lienzo final, mover la imagen dentro, escalarla, convertirla a JPG, PNG, WebP o AVIF,
-                reducir su peso, rotarla, voltearla y anadir una marca de agua de texto.
+                Puedes cambiar el lienzo final, anadir varias imagenes para crear un collage, moverlas dentro,
+                escalarlas, convertirlas a JPG, PNG, WebP o AVIF, reducir su peso, rotarlas, voltearlas y anadir una
+                marca de agua de texto.
               </p>
               <h2>Ventajas de trabajar en el navegador</h2>
               <p>

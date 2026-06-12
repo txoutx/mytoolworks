@@ -23,7 +23,7 @@ export function Footer() {
     <footer className="footer">
       <div className="container footer-inner">
         <span>MyToolWorks.com</span>
-        <span>Herramientas online rapidas y limpias.</span>
+        <span>Herramientas online rapidas y limpias. Hecho por txoutx.</span>
         <nav className="footer-links" aria-label="Enlaces legales">
           <Link href="/politica-privacidad">Privacidad</Link>
           <Link href="/cookies">Cookies</Link>

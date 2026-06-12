@@ -307,6 +307,32 @@ h1 {
   padding: 10px 12px;
 }
 
+.image-layer-row {
+  width: 100%;
+  color: inherit;
+  text-align: left;
+}
+
+.image-layer-row.active {
+  border-color: var(--brand);
+  background: #f0fbf8;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+}
+
+.image-layer-remove {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #f1f4f6;
+  color: #43515a;
+}
+
+.image-layer-remove:hover {
+  background: #e8eef1;
+}
+
 .file-row span {
   overflow: hidden;
   text-overflow: ellipsis;

@@ -17,11 +17,24 @@ type ExportFormat = "jpeg" | "png" | "webp" | "avif";
 type DragMode = "move-image" | "scale-image" | "rotate-image" | "move-watermark" | null;
 
 type ImageInfo = {
+  id: string;
   name: string;
   type: string;
   size: number;
   width: number;
   height: number;
+};
+
+type ImageLayer = {
+  id: string;
+  info: ImageInfo;
+  image: HTMLImageElement;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  flipX: boolean;
+  flipY: boolean;
 };
 
 type PointerPoint = {
@@ -42,8 +55,7 @@ const ratioOptions = [
 export function ImageTool() {
   const inputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imageRef = useRef<HTMLImageElement | null>(null);
-  const objectUrlRef = useRef("");
+  const objectUrlsRef = useRef<string[]>([]);
   const dragRef = useRef<{
     mode: DragMode;
     start: PointerPoint;
@@ -57,7 +69,8 @@ export function ImageTool() {
     startAngle: number;
   } | null>(null);
 
-  const [imageInfo, setImageInfo] = useState<ImageInfo | null>(null);
+  const [layers, setLayers] = useState<ImageLayer[]>([]);
+  const [activeLayerId, setActiveLayerId] = useState("");
   const [canvasWidth, setCanvasWidth] = useState(0);
   const [canvasHeight, setCanvasHeight] = useState(0);
   const [format, setFormat] = useState<ExportFormat>("webp");
@@ -75,10 +88,14 @@ export function ImageTool() {
   const [watermarkY, setWatermarkY] = useState(0);
   const [resultSize, setResultSize] = useState<number | null>(null);
   const [message, setMessage] = useState("");
+  const activeLayer = layers.find((layer) => layer.id === activeLayerId) ?? null;
+  const activeInfo = activeLayer?.info ?? null;
 
   useEffect(() => {
     renderPreview();
   }, [
+    layers,
+    activeLayerId,
     canvasWidth,
     canvasHeight,
     format,
@@ -96,42 +113,118 @@ export function ImageTool() {
     watermarkY
   ]);
 
+  useEffect(() => {
+    return () => {
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, []);
+
   function loadImage(fileList: FileList | null) {
-    const file = fileList?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setMessage("Sube una imagen valida.");
+    const files = Array.from(fileList ?? []).filter((file) => file.type.startsWith("image/"));
+    if (!files.length) {
+      setMessage("Sube una o varias imagenes validas.");
       return;
     }
 
-    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-    const url = URL.createObjectURL(file);
-    objectUrlRef.current = url;
-    const image = new Image();
-    image.onload = () => {
-      imageRef.current = image;
-      const info = {
-        name: file.name,
-        type: file.type || file.name.split(".").pop()?.toUpperCase() || "Imagen",
-        size: file.size,
-        width: image.naturalWidth,
-        height: image.naturalHeight
+    Promise.all(files.map(readImageFile))
+      .then((nextLayers) => {
+        if (!nextLayers.length) return;
+        const first = nextLayers[0];
+        const isFirstBatch = layers.length === 0;
+        setLayers((current) => [...saveActiveLayer(current), ...nextLayers]);
+        setActiveLayerId(first.id);
+        loadLayerIntoControls(first);
+        if (isFirstBatch) {
+          setCanvasWidth(first.info.width);
+          setCanvasHeight(first.info.height);
+          setWatermarkX(first.info.width - 28);
+          setWatermarkY(first.info.height - 28);
+        }
+        setMessage("");
+      })
+      .catch(() => setMessage("El navegador no pudo leer alguna imagen."));
+  }
+
+  function readImageFile(file: File) {
+    return new Promise<ImageLayer>((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      objectUrlsRef.current.push(url);
+      const image = new Image();
+      image.onload = () => {
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const info = {
+          id,
+          name: file.name,
+          type: file.type || file.name.split(".").pop()?.toUpperCase() || "Imagen",
+          size: file.size,
+          width: image.naturalWidth,
+          height: image.naturalHeight
+        };
+        resolve({
+          id,
+          info,
+          image,
+          x: canvasWidth > 0 ? canvasWidth / 2 : image.naturalWidth / 2,
+          y: canvasHeight > 0 ? canvasHeight / 2 : image.naturalHeight / 2,
+          scale: layers.length > 0 && canvasWidth > 0 ? Math.min((canvasWidth / image.naturalWidth) * 70, (canvasHeight / image.naturalHeight) * 70, 100) : 100,
+          rotation: 0,
+          flipX: false,
+          flipY: false
+        });
       };
-      setImageInfo(info);
-      setCanvasWidth(image.naturalWidth);
-      setCanvasHeight(image.naturalHeight);
-      setImageX(image.naturalWidth / 2);
-      setImageY(image.naturalHeight / 2);
-      setImageScale(100);
-      setImageRotation(0);
-      setFlipX(false);
-      setFlipY(false);
-      setWatermarkX(image.naturalWidth - 28);
-      setWatermarkY(image.naturalHeight - 28);
-      setMessage("");
-    };
-    image.onerror = () => setMessage("El navegador no pudo leer esta imagen.");
-    image.src = url;
+      image.onerror = reject;
+      image.src = url;
+    });
+  }
+
+  function saveActiveLayer(currentLayers = layers) {
+    if (!activeLayerId) return currentLayers;
+    return currentLayers.map((layer) =>
+      layer.id === activeLayerId
+        ? {
+            ...layer,
+            x: imageX,
+            y: imageY,
+            scale: imageScale,
+            rotation: imageRotation,
+            flipX,
+            flipY
+          }
+        : layer
+    );
+  }
+
+  function loadLayerIntoControls(layer: ImageLayer) {
+    setImageX(layer.x);
+    setImageY(layer.y);
+    setImageScale(layer.scale);
+    setImageRotation(layer.rotation);
+    setFlipX(layer.flipX);
+    setFlipY(layer.flipY);
+  }
+
+  function selectLayer(layer: ImageLayer) {
+    setLayers((current) => saveActiveLayer(current));
+    setActiveLayerId(layer.id);
+    loadLayerIntoControls(layer);
+  }
+
+  function removeLayer(layerId: string) {
+    setLayers((current) => {
+      const saved = saveActiveLayer(current).filter((layer) => layer.id !== layerId);
+      if (!saved.length) {
+        setActiveLayerId("");
+        setResultSize(null);
+        setMessage("");
+        return [];
+      }
+      if (layerId === activeLayerId) {
+        const next = saved[saved.length - 1];
+        setActiveLayerId(next.id);
+        loadLayerIntoControls(next);
+      }
+      return saved;
+    });
   }
 
   function setCanvasSize(nextWidth: number, nextHeight: number) {
@@ -148,23 +241,23 @@ export function ImageTool() {
   }
 
   function applyCanvasPercent(percent: number) {
-    if (!imageInfo) return;
-    setCanvasSize((imageInfo.width * percent) / 100, (imageInfo.height * percent) / 100);
+    if (!activeInfo) return;
+    setCanvasSize((activeInfo.width * percent) / 100, (activeInfo.height * percent) / 100);
   }
 
   function applyCanvasRatio(value: string) {
-    if (!imageInfo || value === "free") return;
+    if (!activeInfo || value === "free") return;
     const [rw, rh] = value.split(":").map(Number);
     const ratio = rw / rh;
-    const base = Math.max(canvasWidth || imageInfo.width, 1);
+    const base = Math.max(canvasWidth || activeInfo.width, 1);
     setCanvasSize(base, Math.round(base / ratio));
   }
 
   function resetImageLayer() {
-    if (!imageInfo) return;
+    if (!activeInfo) return;
     setImageX(canvasWidth / 2);
     setImageY(canvasHeight / 2);
-    setImageScale(Math.min((canvasWidth / imageInfo.width) * 100, (canvasHeight / imageInfo.height) * 100, 100));
+    setImageScale(Math.min((canvasWidth / activeInfo.width) * 100, (canvasHeight / activeInfo.height) * 100, 100));
     setImageRotation(0);
     setFlipX(false);
     setFlipY(false);
@@ -172,14 +265,13 @@ export function ImageTool() {
 
   function renderPreview() {
     const canvas = canvasRef.current;
-    if (!canvas || !imageRef.current || !imageInfo || canvasWidth <= 0 || canvasHeight <= 0) return;
+    if (!canvas || !layers.length || canvasWidth <= 0 || canvasHeight <= 0) return;
     renderToCanvas(canvas, true);
     estimateSize();
   }
 
   function renderToCanvas(canvas: HTMLCanvasElement, includeControls: boolean) {
-    const image = imageRef.current;
-    if (!image || !imageInfo) return;
+    if (!layers.length) return;
     const offset = includeControls ? editorPadding : 0;
     canvas.width = Math.round(canvasWidth + offset * 2);
     canvas.height = Math.round(canvasHeight + offset * 2);
@@ -199,11 +291,10 @@ export function ImageTool() {
     ctx.beginPath();
     ctx.rect(0, 0, canvasWidth, canvasHeight);
     ctx.clip();
-    ctx.translate(imageX, imageY);
-    ctx.rotate((imageRotation * Math.PI) / 180);
-    ctx.scale((flipX ? -1 : 1) * (imageScale / 100), (flipY ? -1 : 1) * (imageScale / 100));
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(image, -imageInfo.width / 2, -imageInfo.height / 2);
+    layers.forEach((layer) => {
+      const editableLayer = getRenderableLayer(layer);
+      drawLayer(ctx, editableLayer);
+    });
     ctx.restore();
 
     ctx.save();
@@ -213,7 +304,7 @@ export function ImageTool() {
     drawWatermark(ctx);
     ctx.restore();
 
-    if (includeControls) {
+    if (includeControls && activeLayer) {
       drawCanvasBoundary(ctx);
       drawControls(ctx);
     }
@@ -245,8 +336,31 @@ export function ImageTool() {
     ctx.restore();
   }
 
+  function getRenderableLayer(layer: ImageLayer) {
+    if (layer.id !== activeLayerId) return layer;
+    return {
+      ...layer,
+      x: imageX,
+      y: imageY,
+      scale: imageScale,
+      rotation: imageRotation,
+      flipX,
+      flipY
+    };
+  }
+
+  function drawLayer(ctx: CanvasRenderingContext2D, layer: ImageLayer) {
+    ctx.save();
+    ctx.translate(layer.x, layer.y);
+    ctx.rotate((layer.rotation * Math.PI) / 180);
+    ctx.scale((layer.flipX ? -1 : 1) * (layer.scale / 100), (layer.flipY ? -1 : 1) * (layer.scale / 100));
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(layer.image, -layer.info.width / 2, -layer.info.height / 2);
+    ctx.restore();
+  }
+
   function drawControls(ctx: CanvasRenderingContext2D) {
-    if (!imageInfo) return;
+    if (!activeInfo) return;
     const box = getImageControlPoints();
     ctx.save();
     ctx.strokeStyle = "#0f766e";
@@ -283,7 +397,7 @@ export function ImageTool() {
   }
 
   function getImageControlPoints() {
-    const info = imageInfo ?? { width: 1, height: 1 };
+    const info = activeInfo ?? { width: 1, height: 1 };
     const scale = imageScale / 100;
     const halfW = (info.width * scale) / 2;
     const halfH = (info.height * scale) / 2;
@@ -305,7 +419,7 @@ export function ImageTool() {
   }
 
   function estimateSize() {
-    if (!imageRef.current || !imageInfo || canvasWidth <= 0 || canvasHeight <= 0) return;
+    if (!layers.length || canvasWidth <= 0 || canvasHeight <= 0) return;
     const output = document.createElement("canvas");
     renderToCanvas(output, false);
     output.toBlob((blob) => {
@@ -314,7 +428,7 @@ export function ImageTool() {
   }
 
   function downloadImage() {
-    if (!imageInfo) {
+    if (!layers.length) {
       setMessage("Primero sube una imagen.");
       return;
     }
@@ -349,10 +463,14 @@ export function ImageTool() {
   }
 
   function onCanvasPointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
-    if (!imageInfo) return;
+    if (!activeLayer) return;
     const point = pointerFromEvent(event);
     const mode = hitTest(point);
-    if (!mode) return;
+    if (!mode) {
+      const clickedLayer = findLayerAtPoint(point);
+      if (clickedLayer) selectLayer(clickedLayer);
+      return;
+    }
     event.currentTarget.setPointerCapture(event.pointerId);
     dragRef.current = {
       mode,
@@ -410,11 +528,27 @@ export function ImageTool() {
   }
 
   function pointInImage(point: PointerPoint) {
-    if (!imageInfo) return false;
+    if (!activeInfo) return false;
     const scale = imageScale / 100;
     const angle = (-imageRotation * Math.PI) / 180;
     const local = rotatePoint(point.x - imageX, point.y - imageY, angle);
-    return Math.abs(local.x) <= (imageInfo.width * scale) / 2 && Math.abs(local.y) <= (imageInfo.height * scale) / 2;
+    return Math.abs(local.x) <= (activeInfo.width * scale) / 2 && Math.abs(local.y) <= (activeInfo.height * scale) / 2;
+  }
+
+  function findLayerAtPoint(point: PointerPoint) {
+    const savedLayers = saveActiveLayer();
+    for (let index = savedLayers.length - 1; index >= 0; index -= 1) {
+      const layer = savedLayers[index];
+      if (layer.id !== activeLayerId && pointInLayer(point, layer)) return layer;
+    }
+    return null;
+  }
+
+  function pointInLayer(point: PointerPoint, layer: ImageLayer) {
+    const scale = layer.scale / 100;
+    const angle = (-layer.rotation * Math.PI) / 180;
+    const local = rotatePoint(point.x - layer.x, point.y - layer.y, angle);
+    return Math.abs(local.x) <= (layer.info.width * scale) / 2 && Math.abs(local.y) <= (layer.info.height * scale) / 2;
   }
 
   return (
@@ -425,29 +559,53 @@ export function ImageTool() {
           ref={inputRef}
           className="sr-only"
           type="file"
+          multiple
           accept="image/jpeg,image/png,image/webp,image/avif,image/*"
           onChange={(event) => loadImage(event.target.files)}
         />
         <button className="dropzone" type="button" onClick={() => inputRef.current?.click()}>
           <div>
             <UploadCloud size={36} aria-hidden="true" />
-            <strong>{imageInfo ? "Cambiar imagen" : "Seleccionar imagen"}</strong>
-            <span>JPG, PNG, WebP o AVIF si tu navegador lo soporta.</span>
+            <strong>{layers.length ? "Anadir imagenes" : "Seleccionar imagenes"}</strong>
+            <span>Sube una o varias imagenes para crear un collage.</span>
           </div>
         </button>
-        {imageInfo && (
+        {layers.length > 0 && (
           <div className="file-list">
-            <div className="file-row">
-              <FileImage size={18} aria-hidden="true" />
-              <span>{imageInfo.name}</span>
-              <small>{formatFileSize(imageInfo.size)}</small>
-              <button type="button" aria-label="Quitar imagen" onClick={() => window.location.reload()}>
-                <X size={16} aria-hidden="true" />
+            {layers.map((layer) => (
+              <button
+                type="button"
+                className={`file-row image-layer-row${layer.id === activeLayerId ? " active" : ""}`}
+                onClick={() => selectLayer(layer)}
+                key={layer.id}
+              >
+                <FileImage size={18} aria-hidden="true" />
+                <span>{layer.info.name}</span>
+                <small>{formatFileSize(layer.info.size)}</small>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Quitar imagen"
+                  className="image-layer-remove"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    removeLayer(layer.id);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      removeLayer(layer.id);
+                    }
+                  }}
+                >
+                  <X size={16} aria-hidden="true" />
+                </span>
               </button>
-            </div>
+            ))}
             <div className="image-meta-grid">
-              <span>{imageInfo.type || "Imagen"}</span>
-              <span>{imageInfo.width} x {imageInfo.height}px</span>
+              <span>{layers.length} imagen{layers.length === 1 ? "" : "es"}</span>
+              {activeInfo && <span>Activa: {activeInfo.width} x {activeInfo.height}px</span>}
               <span>Lienzo: {canvasWidth} x {canvasHeight}px</span>
               {resultSize !== null && <span>Resultado: {formatFileSize(resultSize)}</span>}
             </div>
@@ -549,7 +707,7 @@ export function ImageTool() {
           {resultSize !== null && <span className="status-pill">{formatFileSize(resultSize)}</span>}
         </div>
         <div className="image-preview-canvas-wrap">
-          {imageInfo ? (
+          {layers.length ? (
             <canvas
               ref={canvasRef}
               onPointerDown={onCanvasPointerDown}
@@ -558,11 +716,11 @@ export function ImageTool() {
               onPointerCancel={onCanvasPointerUp}
             />
           ) : (
-            <div className="preview-loading">Sube una imagen para empezar</div>
+            <div className="preview-loading">Sube imagenes para empezar</div>
           )}
         </div>
-        <p className="option-note image-editor-note">Arrastra la imagen para moverla. Usa el tirador verde para escalar y el naranja para rotar.</p>
-        <button className="button process-button" type="button" disabled={!imageInfo} onClick={downloadImage}>
+        <p className="option-note image-editor-note">Selecciona una capa, arrastrala para moverla y usa los tiradores para escalar o rotar.</p>
+        <button className="button process-button" type="button" disabled={!layers.length} onClick={downloadImage}>
           <Download size={18} aria-hidden="true" />
           Descargar imagen
         </button>
