@@ -227,6 +227,21 @@ export function ImageTool() {
     });
   }
 
+  function moveLayer(layerId: string, direction: "front" | "back") {
+    setLayers((current) => {
+      const saved = saveActiveLayer(current);
+      const index = saved.findIndex((layer) => layer.id === layerId);
+      if (index < 0) return saved;
+      const targetIndex = direction === "front" ? Math.min(saved.length - 1, index + 1) : Math.max(0, index - 1);
+      if (targetIndex === index) return saved;
+      const reordered = [...saved];
+      const [layer] = reordered.splice(index, 1);
+      reordered.splice(targetIndex, 0, layer);
+      return reordered;
+    });
+    setActiveLayerId(layerId);
+  }
+
   function setCanvasSize(nextWidth: number, nextHeight: number) {
     const safeWidth = Math.max(1, Math.round(nextWidth || 1));
     const safeHeight = Math.max(1, Math.round(nextHeight || 1));
@@ -572,36 +587,56 @@ export function ImageTool() {
         </button>
         {layers.length > 0 && (
           <div className="file-list">
-            {layers.map((layer) => (
-              <button
-                type="button"
+            {layers.map((layer, index) => (
+              <div
                 className={`file-row image-layer-row${layer.id === activeLayerId ? " active" : ""}`}
                 onClick={() => selectLayer(layer)}
                 key={layer.id}
               >
                 <FileImage size={18} aria-hidden="true" />
-                <span>{layer.info.name}</span>
+                <button type="button" className="image-layer-name" onClick={() => selectLayer(layer)}>
+                  <span>{layer.info.name}</span>
+                  <small>{index === layers.length - 1 ? "Delante" : index === 0 ? "Fondo" : `Capa ${index + 1}`}</small>
+                </button>
                 <small>{formatFileSize(layer.info.size)}</small>
-                <span
-                  role="button"
-                  tabIndex={0}
+                <div className="image-layer-actions">
+                  <button
+                    type="button"
+                    aria-label="Enviar atras"
+                    title="Enviar atras"
+                    disabled={index === 0}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      moveLayer(layer.id, "back");
+                    }}
+                  >
+                    Atras
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Traer adelante"
+                    title="Traer adelante"
+                    disabled={index === layers.length - 1}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      moveLayer(layer.id, "front");
+                    }}
+                  >
+                    Delante
+                  </button>
+                  <button
+                    type="button"
                   aria-label="Quitar imagen"
                   className="image-layer-remove"
                   onClick={(event) => {
                     event.stopPropagation();
                     removeLayer(layer.id);
                   }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      removeLayer(layer.id);
-                    }
-                  }}
-                >
-                  <X size={16} aria-hidden="true" />
-                </span>
-              </button>
+                  >
+                    <X size={16} aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
             ))}
             <div className="image-meta-grid">
               <span>{layers.length} imagen{layers.length === 1 ? "" : "es"}</span>
