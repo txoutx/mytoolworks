@@ -28,6 +28,8 @@ import {
   Wrench
 } from "lucide-react";
 import type { Tool, ToolKind } from "../data/tools";
+import type { Locale } from "../../lib/i18n";
+import { ui } from "../../lib/i18n";
 
 const iconMap: Partial<Record<ToolKind, ComponentType<{ size?: number; className?: string }>>> = {
   pdf: FileText
@@ -74,11 +76,13 @@ const pdfAccentByGroup: Record<string, string> = {
 export function ToolCard({
   tool,
   compact = false,
-  variant = "default"
+  variant = "default",
+  locale = "es"
 }: {
   tool: Tool;
   compact?: boolean;
   variant?: "default" | "showcase";
+  locale?: Locale;
 }) {
   const Icon = toolIconMap[tool.slug] ?? iconMap[tool.kind] ?? FileText;
   const accent = getAccent(tool);
@@ -107,7 +111,7 @@ export function ToolCard({
       </div>
       {variant !== "showcase" && (
         <footer>
-          Abrir herramienta <ArrowRight size={15} aria-hidden="true" />
+          {ui[locale].openTool} <ArrowRight size={15} aria-hidden="true" />
         </footer>
       )}
     </Link>
@@ -115,9 +119,16 @@ export function ToolCard({
 }
 
 function getAccent(tool: Tool) {
-  if (tool.categorySlug === "pdf") return pdfAccentByGroup[tool.group] ?? "coral";
+  if (tool.categorySlug === "pdf") return pdfAccentByGroup[tool.group] ?? pdfAccentByGroup[spanishGroup(tool.group)] ?? "coral";
   if (tool.categorySlug === "img") return "blue";
   return "yellow";
+}
+
+function spanishGroup(group: string) {
+  if (group === "Convert") return "Convertir";
+  if (group === "Organize") return "Organizar";
+  if (group === "Sign") return "Firmar";
+  return group;
 }
 
 function getOutputLabel(tool: Tool) {

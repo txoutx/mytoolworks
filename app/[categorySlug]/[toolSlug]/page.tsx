@@ -5,6 +5,8 @@ import { ToolCard } from "../../components/ToolCard";
 import { ToolRunner } from "../../components/ToolRunner";
 import type { Tool } from "../../data/tools";
 import { categories, getCategory, getRelatedTools, getTool, tools } from "../../data/tools";
+import type { Locale } from "../../../lib/i18n";
+import { localizeCategory, localizeTool, ui, withLocalePath } from "../../../lib/i18n";
 
 type PageProps = {
   params: Promise<{ categorySlug: string; toolSlug: string }>;
@@ -45,9 +47,16 @@ export default async function ToolPage({ params }: PageProps) {
 
   if (!tool) notFound();
 
-  const category = getCategory(tool.categorySlug);
-  const related = getRelatedTools(tool);
-  const seoContent = getToolSeoContent(tool);
+  return <ToolPageContent tool={tool} locale="es" />;
+}
+
+export function ToolPageContent({ tool: sourceTool, locale }: { tool: Tool; locale: Locale }) {
+  const tool = localizeTool(sourceTool, locale);
+  const sourceCategory = getCategory(sourceTool.categorySlug);
+  const category = sourceCategory ? localizeCategory(sourceCategory, locale) : undefined;
+  const related = getRelatedTools(sourceTool).map((item) => localizeTool(item, locale));
+  const seoContent = getToolSeoContent(tool, locale);
+  const t = ui[locale];
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
@@ -69,14 +78,14 @@ export default async function ToolPage({ params }: PageProps) {
       {
         "@type": "ListItem",
         position: 1,
-        name: "Inicio",
-        item: "https://mytoolworks.com"
+        name: locale === "en" ? "Home" : "Inicio",
+        item: `https://mytoolworks.com${withLocalePath("/", locale)}`
       },
       {
         "@type": "ListItem",
         position: 2,
         name: category?.title ?? tool.categorySlug,
-        item: `https://mytoolworks.com/${tool.categorySlug}`
+        item: `https://mytoolworks.com${withLocalePath(`/${tool.categorySlug}`, locale)}`
       },
       {
         "@type": "ListItem",
@@ -89,7 +98,7 @@ export default async function ToolPage({ params }: PageProps) {
 
   return (
     <div className="site-shell">
-      <Header />
+      <Header locale={locale} />
       <main>
         <section className="hero compact-hero">
           <div className="container">
@@ -99,30 +108,30 @@ export default async function ToolPage({ params }: PageProps) {
           </div>
         </section>
         <div className="container tool-top-ad">
-          <AdSlot label="Anuncio superior" />
+          <AdSlot label={t.topAd} locale={locale} />
         </div>
         <div className="container two-column">
           <article>
-            <ToolRunner tool={tool} />
+            <ToolRunner tool={tool} locale={locale} />
             <div className="tool-result-ad">
-              <AdSlot label="Anuncio despues del resultado" />
+              <AdSlot label={t.resultAd} locale={locale} />
             </div>
             <div className="article tool-seo-content">
               <h2>{seoContent.heading}</h2>
               <p>{seoContent.intro}</p>
-              <h2>Como usar {tool.title}</h2>
+              <h2>{locale === "en" ? `How to use ${tool.title}` : `Como usar ${tool.title}`}</h2>
               <ol>
                 {seoContent.steps.map((step) => (
                   <li key={step}>{step}</li>
                 ))}
               </ol>
-              <h2>Privacidad</h2>
+              <h2>{locale === "en" ? "Privacy" : "Privacidad"}</h2>
               <p>
-                En las herramientas disponibles en navegador, el archivo se procesa localmente siempre que sea posible.
-                Las conversiones que requieren servidor especializado deberan usar almacenamiento temporal y limpieza
-                automatica cuando se conecte el backend.
+                {locale === "en"
+                  ? "For browser-based tools, files are processed locally whenever possible. Conversions that need a specialized server should use temporary storage and automatic cleanup when the backend is connected."
+                  : "En las herramientas disponibles en navegador, el archivo se procesa localmente siempre que sea posible. Las conversiones que requieren servidor especializado deberan usar almacenamiento temporal y limpieza automatica cuando se conecte el backend."}
               </p>
-              <h2>Preguntas frecuentes</h2>
+              <h2>{locale === "en" ? "Frequently asked questions" : "Preguntas frecuentes"}</h2>
               <div className="faq-list">
                 {seoContent.faqs.map((item) => (
                   <section className="faq-item" key={item.question}>
@@ -134,9 +143,9 @@ export default async function ToolPage({ params }: PageProps) {
             </div>
           </article>
           <aside className="sidebar">
-            <AdSlot label="Anuncio lateral" />
+            <AdSlot label={t.sideAd} locale={locale} />
             <div className="related-list">
-              <h2>Relacionadas</h2>
+              <h2>{t.related}</h2>
               {related.map((item) => (
                 <a href={item.route} key={item.route}>
                   {item.title}
@@ -148,12 +157,13 @@ export default async function ToolPage({ params }: PageProps) {
       </main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
-      <Footer />
+      <Footer locale={locale} />
     </div>
   );
 }
 
-function getToolSeoContent(tool: Tool) {
+function getToolSeoContent(tool: Tool, locale: Locale = "es") {
+  if (locale === "en") return getEnglishToolSeoContent(tool);
   const baseSteps = [
     tool.input === "html" ? "Pega la URL que quieres convertir." : "Sube el archivo desde tu dispositivo.",
     "Revisa la vista previa y ajusta las opciones disponibles.",
@@ -232,6 +242,90 @@ function getToolSeoContent(tool: Tool) {
       {
         question: "Hay limite de tamano?",
         answer: "El limite practico depende del navegador, memoria disponible y, cuando exista backend, de los limites configurados en el servidor."
+      }
+    ]
+  };
+}
+
+function getEnglishToolSeoContent(tool: Tool) {
+  const baseSteps = [
+    tool.input === "html" ? "Paste the URL you want to convert." : "Upload the file from your device.",
+    "Check the preview and adjust the available options.",
+    `Click the ${tool.title.toLowerCase()} button.`,
+    "Download the result when processing is complete."
+  ];
+
+  const bySlug: Record<string, { intro: string; steps?: string[] }> = {
+    "unir-pdf": {
+      intro: "Merge several PDF files into a single document. You can drag PDFs to define the order before generating the final file.",
+      steps: ["Upload two or more PDFs.", "Drag the cards to order the documents.", "Check the visual numbering.", "Click Merge PDF and download the result."]
+    },
+    "dividir-pdf": {
+      intro: "Extract specific pages from a PDF by selecting them visually. Useful for separating chapters, invoices or individual pages.",
+      steps: ["Upload a PDF.", "Click the pages you want to extract.", "Check that they are selected.", "Click Split PDF to download the selected pages."]
+    },
+    "comprimir-pdf": {
+      intro: "Reduce PDF file size by trying different compression levels. If the document is already optimized, the tool avoids downloading a heavier version.",
+      steps: ["Upload the PDF.", "Choose the compression level.", "Process the file.", "Download only when a lighter version is created."]
+    },
+    "rotar-pdf": {
+      intro: "Rotate full PDF pages or selected pages to fix scanned documents, forms or landscape pages.",
+      steps: ["Upload the PDF.", "Select specific pages or rotate all pages.", "Apply the needed orientation.", "Download the rotated PDF."]
+    },
+    "ordenar-pdf": {
+      intro: "Reorganize PDF pages with visual cards. Drag each page until the document is in the correct order.",
+      steps: ["Upload the PDF.", "Drag pages in the visual view.", "Review the final numbering.", "Download the reordered PDF."]
+    },
+    "pdf-a-jpg": {
+      intro: "Convert PDF pages to images and choose JPG, PNG or WebP. Export one page or several pages in a ZIP.",
+      steps: ["Upload the PDF.", "Select pages if you do not want all of them.", "Choose the image format.", "Download the image or ZIP."]
+    },
+    "jpg-a-pdf": {
+      intro: "Convert images into a PDF. It works with JPG, PNG, WebP and other formats your browser can read.",
+      steps: ["Upload one or more images.", "Order them visually if needed.", "Generate the PDF.", "Download the final document."]
+    },
+    "html-a-pdf": {
+      intro: "Convert a public URL into PDF. A fast way to save a web page as a document.",
+      steps: ["Paste a public URL starting with http:// or https://.", "Click convert.", "Wait for the server to generate the PDF.", "Download the file."]
+    },
+    "firmar-pdf": {
+      intro: "Draw a signature, save it and drag it onto the PDF. You can place several signatures, move, scale or remove them before downloading.",
+      steps: ["Upload the PDF.", "Draw a signature in the side panel.", "Add it and drag it to the page you want.", "Adjust size and download the signed PDF."]
+    }
+  };
+
+  const override = bySlug[tool.slug];
+
+  return {
+    heading: `${tool.title} free online`,
+    intro: override?.intro ?? `${tool.description} This page is designed for fast browser-based work with a clean interface.`,
+    steps: override?.steps ?? baseSteps,
+    faqs: [
+      {
+        question: `Can I use ${tool.title} for free?`,
+        answer: "Yes, the tool is designed for free online use. Some advanced conversions may require a specialized backend."
+      },
+      {
+        question: "Are my files stored?",
+        answer:
+          tool.processing === "client"
+            ? "In this tool, processing runs in the browser whenever possible."
+            : "This tool needs a backend for professional output; when connected, it should use temporary storage and automatic cleanup."
+      },
+      {
+        question: "Does it work on mobile?",
+        answer: "Yes, the interface is responsive and prepared for mobile, tablet and desktop."
+      },
+      {
+        question: "Can I reorder or select pages?",
+        answer:
+          ["unir-pdf", "dividir-pdf", "ordenar-pdf", "rotar-pdf", "pdf-a-jpg"].includes(tool.slug)
+            ? "Yes, this tool includes visual selection or reordering depending on the task."
+            : "It depends on the tool. Available options appear in the workspace after you upload a file."
+      },
+      {
+        question: "Is there a size limit?",
+        answer: "The practical limit depends on your browser, available memory and, when a backend exists, server limits."
       }
     ]
   };

@@ -12,6 +12,7 @@ import {
   UploadCloud,
   X
 } from "lucide-react";
+import type { Locale } from "../../lib/i18n";
 
 type ExportFormat = "jpeg" | "png" | "webp" | "avif";
 type DragMode = "move-image" | "scale-image" | "rotate-image" | "move-watermark" | null;
@@ -52,7 +53,85 @@ const ratioOptions = [
   { label: "9:16", value: "9:16" }
 ];
 
-export function ImageTool() {
+const imageToolText = {
+  es: {
+    editor: "Editor de imagen",
+    addImages: "Anadir imagenes",
+    selectImages: "Seleccionar imagenes",
+    uploadHint: "Sube una o varias imagenes para crear un collage.",
+    canvas: "Lienzo",
+    canvasWidth: "Ancho lienzo",
+    canvasHeight: "Alto lienzo",
+    image: "Imagen",
+    scale: "Escala",
+    rotation: "Rotacion",
+    left: "Izquierda",
+    right: "Derecha",
+    horizontal: "Horizontal",
+    vertical: "Vertical",
+    fit: "Ajustar",
+    convert: "Convertir y comprimir",
+    format: "Formato",
+    quality: "Calidad",
+    watermark: "Marca de agua",
+    text: "Texto",
+    size: "Tamano",
+    opacity: "Opacidad",
+    viewer: "Visor editable",
+    empty: "Sube imagenes para empezar",
+    note: "Selecciona una capa, arrastrala para moverla y usa los tiradores para escalar o rotar.",
+    download: "Descargar imagen",
+    front: "Delante",
+    back: "Atras",
+    background: "Fondo",
+    layer: "Capa",
+    active: "Activa",
+    images: "imagenes",
+    oneImage: "imagen",
+    result: "Resultado",
+    downloaded: "Imagen descargada."
+  },
+  en: {
+    editor: "Image editor",
+    addImages: "Add images",
+    selectImages: "Select images",
+    uploadHint: "Upload one or more images to create a collage.",
+    canvas: "Canvas",
+    canvasWidth: "Canvas width",
+    canvasHeight: "Canvas height",
+    image: "Image",
+    scale: "Scale",
+    rotation: "Rotation",
+    left: "Left",
+    right: "Right",
+    horizontal: "Horizontal",
+    vertical: "Vertical",
+    fit: "Fit",
+    convert: "Convert and compress",
+    format: "Format",
+    quality: "Quality",
+    watermark: "Watermark",
+    text: "Text",
+    size: "Size",
+    opacity: "Opacity",
+    viewer: "Editable viewer",
+    empty: "Upload images to start",
+    note: "Select a layer, drag it to move it and use the handles to scale or rotate.",
+    download: "Download image",
+    front: "Front",
+    back: "Back",
+    background: "Background",
+    layer: "Layer",
+    active: "Active",
+    images: "images",
+    oneImage: "image",
+    result: "Result",
+    downloaded: "Image downloaded."
+  }
+} as const;
+
+export function ImageTool({ locale = "es" }: { locale?: Locale }) {
+  const t = imageToolText[locale];
   const inputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const objectUrlsRef = useRef<string[]>([]);
@@ -122,7 +201,7 @@ export function ImageTool() {
   function loadImage(fileList: FileList | null) {
     const files = Array.from(fileList ?? []).filter((file) => file.type.startsWith("image/"));
     if (!files.length) {
-      setMessage("Sube una o varias imagenes validas.");
+      setMessage(locale === "en" ? "Upload one or more valid images." : "Sube una o varias imagenes validas.");
       return;
     }
 
@@ -142,7 +221,7 @@ export function ImageTool() {
         }
         setMessage("");
       })
-      .catch(() => setMessage("El navegador no pudo leer alguna imagen."));
+      .catch(() => setMessage(locale === "en" ? "The browser could not read one of the images." : "El navegador no pudo leer alguna imagen."));
   }
 
   function readImageFile(file: File) {
@@ -444,14 +523,14 @@ export function ImageTool() {
 
   function downloadImage() {
     if (!layers.length) {
-      setMessage("Primero sube una imagen.");
+      setMessage(locale === "en" ? "Upload an image first." : "Primero sube una imagen.");
       return;
     }
     const output = document.createElement("canvas");
     renderToCanvas(output, false);
     output.toBlob((blob) => {
       if (!blob) {
-        setMessage(`${format.toUpperCase()} no esta soportado por este navegador.`);
+        setMessage(locale === "en" ? `${format.toUpperCase()} is not supported by this browser.` : `${format.toUpperCase()} no esta soportado por este navegador.`);
         return;
       }
       const url = URL.createObjectURL(blob);
@@ -463,7 +542,7 @@ export function ImageTool() {
       link.remove();
       URL.revokeObjectURL(url);
       setResultSize(blob.size);
-      setMessage("Imagen descargada.");
+      setMessage(t.downloaded);
     }, mimeForFormat(format), quality / 100);
   }
 
@@ -569,7 +648,7 @@ export function ImageTool() {
   return (
     <div className="image-tool-shell">
       <section className="tool-workspace image-upload-panel">
-        <h2>Editor de imagen</h2>
+        <h2>{t.editor}</h2>
         <input
           ref={inputRef}
           className="sr-only"
@@ -581,8 +660,8 @@ export function ImageTool() {
         <button className="dropzone" type="button" onClick={() => inputRef.current?.click()}>
           <div>
             <UploadCloud size={36} aria-hidden="true" />
-            <strong>{layers.length ? "Anadir imagenes" : "Seleccionar imagenes"}</strong>
-            <span>Sube una o varias imagenes para crear un collage.</span>
+            <strong>{layers.length ? t.addImages : t.selectImages}</strong>
+            <span>{t.uploadHint}</span>
           </div>
         </button>
         {layers.length > 0 && (
@@ -596,33 +675,33 @@ export function ImageTool() {
                 <FileImage size={18} aria-hidden="true" />
                 <button type="button" className="image-layer-name" onClick={() => selectLayer(layer)}>
                   <span>{layer.info.name}</span>
-                  <small>{index === layers.length - 1 ? "Delante" : index === 0 ? "Fondo" : `Capa ${index + 1}`}</small>
+                  <small>{index === layers.length - 1 ? t.front : index === 0 ? t.background : `${t.layer} ${index + 1}`}</small>
                 </button>
                 <small>{formatFileSize(layer.info.size)}</small>
                 <div className="image-layer-actions">
                   <button
                     type="button"
-                    aria-label="Enviar atras"
-                    title="Enviar atras"
+                    aria-label={t.back}
+                    title={t.back}
                     disabled={index === 0}
                     onClick={(event) => {
                       event.stopPropagation();
                       moveLayer(layer.id, "back");
                     }}
                   >
-                    Atras
+                    {t.back}
                   </button>
                   <button
                     type="button"
-                    aria-label="Traer adelante"
-                    title="Traer adelante"
+                    aria-label={t.front}
+                    title={t.front}
                     disabled={index === layers.length - 1}
                     onClick={(event) => {
                       event.stopPropagation();
                       moveLayer(layer.id, "front");
                     }}
                   >
-                    Delante
+                    {t.front}
                   </button>
                   <button
                     type="button"
@@ -639,10 +718,10 @@ export function ImageTool() {
               </div>
             ))}
             <div className="image-meta-grid">
-              <span>{layers.length} imagen{layers.length === 1 ? "" : "es"}</span>
-              {activeInfo && <span>Activa: {activeInfo.width} x {activeInfo.height}px</span>}
+              <span>{layers.length} {layers.length === 1 ? t.oneImage : t.images}</span>
+              {activeInfo && <span>{t.active}: {activeInfo.width} x {activeInfo.height}px</span>}
               <span>Lienzo: {canvasWidth} x {canvasHeight}px</span>
-              {resultSize !== null && <span>Resultado: {formatFileSize(resultSize)}</span>}
+              {resultSize !== null && <span>{t.result}: {formatFileSize(resultSize)}</span>}
             </div>
           </div>
         )}
@@ -650,13 +729,13 @@ export function ImageTool() {
       </section>
 
       <section className="tool-workspace image-settings-panel">
-        <h2>Ajustes</h2>
+        <h2>{locale === "en" ? "Settings" : "Ajustes"}</h2>
         <div className="image-settings-grid">
           <div className="tool-options">
-            <h3>Lienzo</h3>
+            <h3>{t.canvas}</h3>
             <div className="field-row">
-              <NumberField label="Ancho lienzo" value={canvasWidth} onChange={(value) => setCanvasSize(value, canvasHeight)} />
-              <NumberField label="Alto lienzo" value={canvasHeight} onChange={(value) => setCanvasSize(canvasWidth, value)} />
+              <NumberField label={t.canvasWidth} value={canvasWidth} onChange={(value) => setCanvasSize(value, canvasHeight)} />
+              <NumberField label={t.canvasHeight} value={canvasHeight} onChange={(value) => setCanvasSize(canvasWidth, value)} />
             </div>
             <div className="segmented-wrap">
               {percentOptions.map((percent) => (
@@ -675,38 +754,38 @@ export function ImageTool() {
           </div>
 
           <div className="tool-options">
-            <h3>Imagen</h3>
+            <h3>{t.image}</h3>
             <div className="field">
-              <label htmlFor="image-scale">Escala {Math.round(imageScale)}%</label>
+              <label htmlFor="image-scale">{t.scale} {Math.round(imageScale)}%</label>
               <input id="image-scale" type="range" min="5" max="600" value={imageScale} onChange={(event) => setImageScale(Number(event.target.value))} />
             </div>
             <div className="field">
-              <label htmlFor="image-rotation">Rotacion {Math.round(imageRotation)} grados</label>
+              <label htmlFor="image-rotation">{t.rotation} {Math.round(imageRotation)} {locale === "en" ? "degrees" : "grados"}</label>
               <input id="image-rotation" type="range" min="0" max="359" value={imageRotation} onChange={(event) => setImageRotation(Number(event.target.value))} />
             </div>
             <div className="segmented-wrap">
               <button type="button" className="small-action" onClick={() => setImageRotation((current) => normalizeRotation(current - 90))}>
-                <RotateCcw size={16} /> Izquierda
+                <RotateCcw size={16} /> {t.left}
               </button>
               <button type="button" className="small-action" onClick={() => setImageRotation((current) => normalizeRotation(current + 90))}>
-                <RotateCw size={16} /> Derecha
+                <RotateCw size={16} /> {t.right}
               </button>
               <button type="button" className="small-action" onClick={() => setFlipX((current) => !current)}>
-                <FlipHorizontal2 size={16} /> Horizontal
+                <FlipHorizontal2 size={16} /> {t.horizontal}
               </button>
               <button type="button" className="small-action" onClick={() => setFlipY((current) => !current)}>
-                <FlipVertical2 size={16} /> Vertical
+                <FlipVertical2 size={16} /> {t.vertical}
               </button>
               <button type="button" className="small-action" onClick={resetImageLayer}>
-                <Move size={16} /> Ajustar
+                <Move size={16} /> {t.fit}
               </button>
             </div>
           </div>
 
           <div className="tool-options">
-            <h3>Convertir y comprimir</h3>
+            <h3>{t.convert}</h3>
             <div className="field">
-              <label htmlFor="image-format">Formato</label>
+              <label htmlFor="image-format">{t.format}</label>
               <select id="image-format" value={format} onChange={(event) => setFormat(event.target.value as ExportFormat)}>
                 <option value="jpeg">JPG</option>
                 <option value="png">PNG</option>
@@ -715,30 +794,30 @@ export function ImageTool() {
               </select>
             </div>
             <div className="field">
-              <label htmlFor="quality">Calidad {quality}%</label>
+              <label htmlFor="quality">{t.quality} {quality}%</label>
               <input id="quality" type="range" min="10" max="100" value={quality} onChange={(event) => setQuality(Number(event.target.value))} />
             </div>
-            <p className="option-note">La calidad afecta a JPG, WebP y AVIF cuando el navegador lo soporta.</p>
+            <p className="option-note">{locale === "en" ? "Quality affects JPG, WebP and AVIF when supported by your browser." : "La calidad afecta a JPG, WebP y AVIF cuando el navegador lo soporta."}</p>
           </div>
 
           <div className="tool-options">
-            <h3>Marca de agua</h3>
+            <h3>{t.watermark}</h3>
             <div className="field">
-              <label htmlFor="watermark">Texto</label>
+              <label htmlFor="watermark">{t.text}</label>
               <input id="watermark" value={watermarkText} onChange={(event) => setWatermarkText(event.target.value)} />
             </div>
             <div className="field-row">
-              <NumberField label="Tamano" value={watermarkSize} onChange={setWatermarkSize} />
-              <NumberField label="Opacidad" value={watermarkOpacity} onChange={(value) => setWatermarkOpacity(clamp(value, 0, 100))} />
+              <NumberField label={t.size} value={watermarkSize} onChange={setWatermarkSize} />
+              <NumberField label={t.opacity} value={watermarkOpacity} onChange={(value) => setWatermarkOpacity(clamp(value, 0, 100))} />
             </div>
-            <p className="option-note">Arrastra la marca de agua en el visor para colocarla.</p>
+            <p className="option-note">{locale === "en" ? "Drag the watermark in the viewer to place it." : "Arrastra la marca de agua en el visor para colocarla."}</p>
           </div>
         </div>
       </section>
 
       <section className="tool-workspace image-preview-panel">
         <div className="preview-top">
-          <span className="preview-title">Visor editable</span>
+          <span className="preview-title">{t.viewer}</span>
           {resultSize !== null && <span className="status-pill">{formatFileSize(resultSize)}</span>}
         </div>
         <div className="image-preview-canvas-wrap">
@@ -751,13 +830,13 @@ export function ImageTool() {
               onPointerCancel={onCanvasPointerUp}
             />
           ) : (
-            <div className="preview-loading">Sube imagenes para empezar</div>
+            <div className="preview-loading">{t.empty}</div>
           )}
         </div>
-        <p className="option-note image-editor-note">Selecciona una capa, arrastrala para moverla y usa los tiradores para escalar o rotar.</p>
+        <p className="option-note image-editor-note">{t.note}</p>
         <button className="button process-button" type="button" disabled={!layers.length} onClick={downloadImage}>
           <Download size={18} aria-hidden="true" />
-          Descargar imagen
+          {t.download}
         </button>
       </section>
     </div>

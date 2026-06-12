@@ -1,17 +1,19 @@
 import { Footer, Header } from "./SiteChrome";
 import type { ReactNode } from "react";
+import type { Locale } from "../../lib/i18n";
 
 type LegalPageProps = {
   eyebrow: string;
   title: string;
   description: string;
   children: ReactNode;
+  locale?: Locale;
 };
 
-export function LegalPage({ eyebrow, title, description, children }: LegalPageProps) {
+export function LegalPage({ eyebrow, title, description, children, locale = "es" }: LegalPageProps) {
   return (
     <div className="site-shell">
-      <Header />
+      <Header locale={locale} />
       <main>
         <section className="hero compact-hero">
           <div className="container">
@@ -26,7 +28,7 @@ export function LegalPage({ eyebrow, title, description, children }: LegalPagePr
           </div>
         </section>
       </main>
-      <Footer />
+      <Footer locale={locale} />
     </div>
   );
 }

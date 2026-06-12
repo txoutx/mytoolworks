@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FileText, UploadCloud, X } from "lucide-react";
 import type { Tool } from "../data/tools";
+import type { Locale } from "../../lib/i18n";
 
 type RunnerProps = {
   tool: Tool;
+  locale?: Locale;
 };
 
 type PagePreview = {
@@ -32,7 +34,44 @@ const formatEuro = new Intl.NumberFormat("es-ES", {
   maximumFractionDigits: 2
 });
 
-export function ToolRunner({ tool }: RunnerProps) {
+const runnerText = {
+  es: {
+    selectFirst: "Primero selecciona un archivo.",
+    validUrl: "Introduce una URL valida que empiece por http:// o https://.",
+    signFirst: "Dibuja y anade al menos una firma al PDF.",
+    preparing: "Preparando archivo...",
+    genericError: "No se pudo procesar con esta herramienta.",
+    urlLabel: "URL de la pagina",
+    urlNote: "Introduce un enlace publico. La herramienta generara un PDF con el contenido principal de la pagina.",
+    addMore: "Anadir mas archivos",
+    selectFiles: "Seleccionar archivos",
+    drop: "Haz clic o arrastra aqui",
+    yourFiles: "tus archivos",
+    yourFile: "tu archivo",
+    generating: "Generando vista previa...",
+    process: "Procesar",
+    processing: "Procesando..."
+  },
+  en: {
+    selectFirst: "Select a file first.",
+    validUrl: "Enter a valid URL starting with http:// or https://.",
+    signFirst: "Draw and add at least one signature to the PDF.",
+    preparing: "Preparing file...",
+    genericError: "This tool could not process the file.",
+    urlLabel: "Page URL",
+    urlNote: "Enter a public link. The tool will generate a PDF with the main page content.",
+    addMore: "Add more files",
+    selectFiles: "Select files",
+    drop: "Click or drag here",
+    yourFiles: "your files",
+    yourFile: "your file",
+    generating: "Generating preview...",
+    process: "Process",
+    processing: "Processing..."
+  }
+} as const;
+
+export function ToolRunner({ tool, locale = "es" }: RunnerProps) {
   if (tool.kind === "mortgage") return <MortgageCalculator />;
   if (tool.kind === "salary") return <SalaryCalculator />;
   if (tool.kind === "units") return <UnitConverter />;
@@ -41,10 +80,11 @@ export function ToolRunner({ tool }: RunnerProps) {
   if (tool.kind === "letter") return <LetterGenerator />;
   if (tool.kind === "summary") return <TextSummarizer />;
   if (tool.kind === "grammar") return <GrammarChecker />;
-  return <PdfUploader tool={tool} />;
+  return <PdfUploader tool={tool} locale={locale} />;
 }
 
-function PdfUploader({ tool }: { tool: Tool }) {
+function PdfUploader({ tool, locale }: { tool: Tool; locale: Locale }) {
+  const t = runnerText[locale];
   const inputRef = useRef<HTMLInputElement>(null);
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const [files, setFiles] = useState<File[]>([]);
@@ -202,22 +242,22 @@ function PdfUploader({ tool }: { tool: Tool }) {
   async function processFiles() {
     if (files.length === 0 && tool.slug !== "html-a-pdf") {
       setStatus("error");
-      setMessage("Primero selecciona un archivo.");
+      setMessage(t.selectFirst);
       return;
     }
     if (tool.slug === "html-a-pdf" && !/^https?:\/\/.+/i.test(urlToPdf.trim())) {
       setStatus("error");
-      setMessage("Introduce una URL valida que empiece por http:// o https://.");
+      setMessage(t.validUrl);
       return;
     }
     if (tool.slug === "firmar-pdf" && placedSignatures.length === 0) {
       setStatus("error");
-      setMessage("Dibuja y anade al menos una firma al PDF.");
+      setMessage(t.signFirst);
       return;
     }
 
     setStatus("processing");
-    setMessage("Preparando archivo...");
+    setMessage(t.preparing);
 
     try {
       const output = await processPdfTool(tool, files, {
@@ -245,7 +285,7 @@ function PdfUploader({ tool }: { tool: Tool }) {
       setMessage(output);
     } catch (error) {
       setStatus("error");
-      setMessage(error instanceof Error ? error.message : "No se pudo procesar con esta herramienta.");
+      setMessage(error instanceof Error ? error.message : t.genericError);
     }
   }
 
@@ -342,8 +382,8 @@ function PdfUploader({ tool }: { tool: Tool }) {
       <h2>{tool.title}</h2>
       {tool.slug === "html-a-pdf" ? (
         <div className="tool-options">
-          <TextField label="URL de la pagina" value={urlToPdf} onChange={setUrlToPdf} />
-          <p className="option-note">Introduce un enlace publico. La herramienta generara un PDF con el contenido principal de la pagina.</p>
+          <TextField label={t.urlLabel} value={urlToPdf} onChange={setUrlToPdf} />
+          <p className="option-note">{t.urlNote}</p>
         </div>
       ) : (
         <>
@@ -376,8 +416,8 @@ function PdfUploader({ tool }: { tool: Tool }) {
           >
             <div>
               <UploadCloud size={36} aria-hidden="true" />
-              <strong>{files.length > 0 ? "Anadir mas archivos" : "Seleccionar archivos"}</strong>
-              <span>Haz clic o arrastra aqui {multiple ? "tus archivos" : "tu archivo"}.</span>
+              <strong>{files.length > 0 ? t.addMore : t.selectFiles}</strong>
+              <span>{t.drop} {multiple ? t.yourFiles : t.yourFile}.</span>
             </div>
           </button>
         </>
@@ -417,7 +457,7 @@ function PdfUploader({ tool }: { tool: Tool }) {
                   <img src={firstPageForFile(pagePreviews, index)?.thumbnail} alt={`Primera pagina de ${preview.name}`} />
                 ) : (
                   <div className="preview-loading" aria-hidden="true">
-                    Generando vista previa...
+                    {t.generating}
                   </div>
                 )}
               </div>
@@ -440,7 +480,7 @@ function PdfUploader({ tool }: { tool: Tool }) {
                   <img src={firstPageForFile(pagePreviews, index)?.thumbnail} alt={`Primera pagina de ${preview.name}`} />
                 ) : (
                   <div className="preview-loading" aria-hidden="true">
-                    Generando vista previa...
+                    {t.generating}
                   </div>
                 )}
               </div>
@@ -824,7 +864,7 @@ function PdfUploader({ tool }: { tool: Tool }) {
         disabled={(files.length === 0 && tool.slug !== "html-a-pdf") || status === "processing"}
         onClick={processFiles}
       >
-        {status === "processing" ? "Procesando..." : `Procesar ${tool.title}`}
+        {status === "processing" ? t.processing : `${t.process} ${tool.title}`}
       </button>
       {message && <div className={`tool-status ${status}`}>{message}</div>}
     </div>

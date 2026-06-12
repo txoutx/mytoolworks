@@ -1,63 +1,70 @@
 import Link from "next/link";
 import { FileImage, FileText } from "lucide-react";
 import { AdSlot, Footer, Header } from "./components/SiteChrome";
+import type { Locale } from "../lib/i18n";
+import { ui, withLocalePath } from "../lib/i18n";
 
 export default function Home() {
+  return <HomePage locale="es" />;
+}
+
+export function HomePage({ locale }: { locale: Locale }) {
+  const t = ui[locale];
   return (
     <div className="site-shell">
-      <Header />
+      <Header locale={locale} />
       <main>
         <section className="hero compact-hero">
           <div className="container">
-            <p className="eyebrow">Herramientas online</p>
+            <p className="eyebrow">{t.homeEyebrow}</p>
             <h1>MyToolWorks</h1>
-            <p className="lead">Elige una categoria y trabaja con PDFs o imagenes directamente desde el navegador.</p>
+            <p className="lead">{t.homeLead}</p>
           </div>
         </section>
 
         <div className="container">
-          <AdSlot />
+          <AdSlot locale={locale} />
         </div>
 
         <section className="home-category-section">
           <div className="container">
             <div className="home-category-grid">
-              <Link href="/pdf" className="home-category-card">
+              <Link href={withLocalePath("/pdf", locale)} className="home-category-card">
                 <div className="home-category-icon" aria-hidden="true">
                   <FileText size={28} />
                 </div>
                 <h2>PDF Tools</h2>
-                <p>Une, divide, comprime, rota, ordena, convierte a imagen y firma archivos PDF.</p>
+                <p>{t.homePdfDescription}</p>
                 <div className="category-preview-list">
-                  <span>Unir PDF</span>
-                  <span>Comprimir</span>
-                  <span>Firmar</span>
+                  <span>{locale === "en" ? "Merge PDF" : "Unir PDF"}</span>
+                  <span>{locale === "en" ? "Compress" : "Comprimir"}</span>
+                  <span>{locale === "en" ? "Sign" : "Firmar"}</span>
                 </div>
-                <footer>Abrir PDF</footer>
+                <footer>{t.openPdf}</footer>
               </Link>
 
-              <Link href="/img" className="home-category-card">
+              <Link href={withLocalePath("/img", locale)} className="home-category-card">
                 <div className="home-category-icon" aria-hidden="true">
                   <FileImage size={28} />
                 </div>
-                <h2>Imagen</h2>
-                <p>Edita, comprime, convierte, redimensiona, recorta y descarga imagenes online.</p>
+                <h2>{t.homeImageTitle}</h2>
+                <p>{t.homeImageDescription}</p>
                 <div className="category-preview-list">
-                  <span>Redimensionar</span>
+                  <span>{locale === "en" ? "Resize" : "Redimensionar"}</span>
                   <span>WebP/JPG/PNG</span>
-                  <span>Marca de agua</span>
+                  <span>{locale === "en" ? "Watermark" : "Marca de agua"}</span>
                 </div>
-                <footer>Abrir imagen</footer>
+                <footer>{t.openImage}</footer>
               </Link>
             </div>
           </div>
         </section>
 
         <div className="container bottom-ad">
-          <AdSlot label="Anuncio inferior" />
+          <AdSlot label={t.lowerAd} locale={locale} />
         </div>
       </main>
-      <Footer />
+      <Footer locale={locale} />
     </div>
   );
 }
