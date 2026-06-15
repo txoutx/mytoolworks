@@ -15,8 +15,10 @@ export const metadata: Metadata = {
   applicationName: "MyToolWorks",
   icons: {
     icon: [
-      { url: "/favicon.ico" },
+      { url: "/favicon-mtw-2026.png", sizes: "192x192", type: "image/png" },
+      { url: "/favicon.ico", type: "image/x-icon" },
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
       { url: "/favicon-192x192.png", sizes: "192x192", type: "image/png" }
     ],
     shortcut: "/favicon.ico",
