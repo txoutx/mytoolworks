@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import Script from "next/script";
 import { CookieConsent } from "./components/CookieConsent";
+import { ThirdPartyScripts } from "./components/ThirdPartyScripts";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -47,32 +47,12 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <head>
-        <Script
-          id="Cookiebot"
-          src="https://consent.cookiebot.com/uc.js"
-          data-cbid="d4c7dab5-5b5d-4327-98fc-047ac5f022ea"
-          data-blockingmode="auto"
-          strategy="beforeInteractive"
-        />
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-4ZTWW5XPZ1"></script>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'G-4ZTWW5XPZ1');`
-          }}
-        />
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5516465526702669"
-          crossOrigin="anonymous"
-        ></script>
       </head>
 
       <body>
         {children}
         <CookieConsent locale={locale} />
+        <ThirdPartyScripts />
       </body>
     </html>
   );

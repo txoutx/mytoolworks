@@ -164,6 +164,41 @@ function ToolPageContent({ tool: sourceTool, locale }: { tool: Tool; locale: Loc
 
 function getToolSeoContent(tool: Tool, locale: Locale = "es") {
   if (locale === "en") return getEnglishToolSeoContent(tool);
+  if (tool.kind === "youtube") {
+    const isBackend = tool.processing === "backend-required";
+    return {
+      heading: `${tool.title} online`,
+      intro: `${tool.description} Esta herramienta esta orientada a revisar enlaces de YouTube de forma rapida y a trabajar solo con contenido propio, con licencia o con permiso del titular.`,
+      steps: [
+        "Pega la URL de YouTube, youtu.be, Shorts o playlist.",
+        "Comprueba el ID detectado, la vista previa y las miniaturas disponibles.",
+        tool.output === "audio" || tool.output === "video" ? "Introduce la duracion para estimar el tamano por calidad." : "Abre o copia los enlaces generados que necesites.",
+        isBackend ? "Conecta el backend para activar descargas directas autorizadas." : "Abre la miniatura o URL limpia desde el navegador."
+      ],
+      faqs: [
+        {
+          question: `Puedo usar ${tool.title} gratis?`,
+          answer: "Si, la pagina y el analisis del enlace son gratuitos. Las descargas o conversiones pueden requerir backend."
+        },
+        {
+          question: "Puedo descargar cualquier video?",
+          answer: "No. Debes usar estas herramientas solo con contenido propio, con licencia, de dominio publico o con permiso del titular de derechos."
+        },
+        {
+          question: "Por que algunas funciones requieren backend?",
+          answer: "El navegador no puede obtener ni convertir medios de YouTube de forma fiable. Para MP3, MP4, playlists o transcripciones hace falta un servidor temporal."
+        },
+        {
+          question: "La herramienta guarda enlaces o archivos?",
+          answer: "La parte disponible en navegador no sube archivos. Un backend de descarga deberia usar archivos temporales y limpieza automatica."
+        },
+        {
+          question: "Funciona con Shorts?",
+          answer: "Si, el detector reconoce enlaces de Shorts y extrae el ID del video para vista previa y miniaturas."
+        }
+      ]
+    };
+  }
   if (tool.kind === "converter") {
     if (tool.slug === "hora-mundial") {
       return {
@@ -306,6 +341,41 @@ function getToolSeoContent(tool: Tool, locale: Locale = "es") {
 }
 
 function getEnglishToolSeoContent(tool: Tool) {
+  if (tool.kind === "youtube") {
+    const isBackend = tool.processing === "backend-required";
+    return {
+      heading: `${tool.title} online`,
+      intro: `${tool.description} This tool is designed to review YouTube links quickly and to work only with your own, licensed or permitted content.`,
+      steps: [
+        "Paste a YouTube, youtu.be, Shorts or playlist URL.",
+        "Check the detected ID, preview and available thumbnails.",
+        tool.output === "audio" || tool.output === "video" ? "Enter the duration to estimate size by quality." : "Open or copy the generated links you need.",
+        isBackend ? "Connect the backend to enable authorized direct downloads." : "Open the thumbnail or clean URL from the browser."
+      ],
+      faqs: [
+        {
+          question: `Can I use ${tool.title} for free?`,
+          answer: "Yes, link analysis is free. Downloads or conversions may require a backend."
+        },
+        {
+          question: "Can I download any video?",
+          answer: "No. Use these tools only with your own content, licensed content, public domain content or permission from the rights holder."
+        },
+        {
+          question: "Why do some functions require a backend?",
+          answer: "The browser cannot reliably fetch or convert YouTube media. MP3, MP4, playlists and transcripts need a temporary server workflow."
+        },
+        {
+          question: "Does the tool store links or files?",
+          answer: "The browser part does not upload files. A download backend should use temporary files and automatic cleanup."
+        },
+        {
+          question: "Does it work with Shorts?",
+          answer: "Yes, the detector recognizes Shorts links and extracts the video ID for preview and thumbnails."
+        }
+      ]
+    };
+  }
   if (tool.kind === "converter") {
     if (tool.slug === "hora-mundial") {
       return {

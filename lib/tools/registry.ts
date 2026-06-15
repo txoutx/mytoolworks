@@ -1,4 +1,4 @@
-export type ToolCategorySlug = "pdf" | "img" | "conversor";
+export type ToolCategorySlug = "pdf" | "img" | "conversor" | "youtube";
 
 export type ToolKind =
   | "pdf"
@@ -9,7 +9,8 @@ export type ToolKind =
   | "cv"
   | "letter"
   | "summary"
-  | "grammar";
+  | "grammar"
+  | "youtube";
 
 export type ProcessingMode = "client" | "backend-required";
 
@@ -36,8 +37,8 @@ export type Tool = {
   status: "Disponible" | "Requiere backend";
   kind: ToolKind;
   processing: ProcessingMode;
-  input: "single-file" | "multi-file" | "office-file" | "html";
-    output: "pdf" | "jpg" | "text" | "calculation";
+  input: "single-file" | "multi-file" | "office-file" | "html" | "url";
+  output: "pdf" | "jpg" | "text" | "calculation" | "audio" | "video" | "metadata" | "image";
   adProfile: AdProfile;
 };
 
@@ -62,6 +63,13 @@ export const categories: ToolCategory[] = [
     shortTitle: "Conversores",
     navLabel: "Conversores",
     description: "Convierte divisas, unidades, horas, zonas horarias, temperatura, peso, datos digitales, area, volumen y energia."
+  },
+  {
+    slug: "youtube",
+    title: "Herramientas YouTube",
+    shortTitle: "YouTube",
+    navLabel: "YouTube",
+    description: "Consulta metadatos, miniaturas, estimaciones de descarga y utilidades para enlaces de YouTube."
   }
 ];
 
@@ -79,6 +87,13 @@ const converterBase = {
   input: "single-file" as const,
   output: "calculation" as const,
   adProfile: "light" as const
+};
+
+const youtubeBase = {
+  categorySlug: "youtube" as const,
+  kind: "youtube" as const,
+  input: "url" as const,
+  adProfile: "high-intent" as const
 };
 
 export const tools: Tool[] = [
@@ -365,6 +380,110 @@ export const tools: Tool[] = [
     group: "Ciencia",
     description: "Convierte julios, kilojulios, calorias, kilocalorias, Wh, kWh y BTU.",
     keywords: ["conversor energia", "julios a calorias", "kwh a joules"]
+  },
+  {
+    ...youtubeBase,
+    slug: "youtube-a-mp3",
+    route: "/youtube/youtube-a-mp3",
+    title: "YouTube a MP3",
+    h1: "Convertir YouTube a MP3",
+    group: "Convertidores",
+    description: "Pega una URL de YouTube, revisa el video y estima el tamano de MP3 por calidad antes de descargar contenido propio o con permiso.",
+    keywords: ["youtube a mp3", "convertir youtube a mp3", "descargar audio youtube", "youtube mp3 320 kbps"],
+    status: "Requiere backend",
+    processing: "backend-required",
+    output: "audio"
+  },
+  {
+    ...youtubeBase,
+    slug: "youtube-a-mp4",
+    route: "/youtube/youtube-a-mp4",
+    title: "YouTube a MP4",
+    h1: "Convertir YouTube a MP4",
+    group: "Convertidores",
+    description: "Pega una URL de YouTube, muestra vista previa y compara calidades de video desde 144p hasta 4K para contenido autorizado.",
+    keywords: ["youtube a mp4", "descargar video youtube", "youtube mp4 1080p", "youtube 4k downloader"],
+    status: "Requiere backend",
+    processing: "backend-required",
+    output: "video"
+  },
+  {
+    ...youtubeBase,
+    slug: "youtube-thumbnail-downloader",
+    route: "/youtube/youtube-thumbnail-downloader",
+    title: "YouTube Thumbnail Downloader",
+    h1: "Descargar miniatura de YouTube",
+    group: "Miniaturas",
+    description: "Extrae el ID del video y abre miniaturas de YouTube en varias resoluciones como maxres, sd, hq y mq.",
+    keywords: ["youtube thumbnail downloader", "descargar miniatura youtube", "thumbnail youtube", "imagen youtube"],
+    status: "Disponible",
+    processing: "client",
+    output: "image"
+  },
+  {
+    ...youtubeBase,
+    slug: "youtube-metadata-viewer",
+    route: "/youtube/youtube-metadata-viewer",
+    title: "YouTube Metadata Viewer",
+    h1: "Ver metadatos de YouTube",
+    group: "Analisis",
+    description: "Pega un enlace de YouTube para ver ID del video, miniaturas, enlace embed, enlaces limpios y datos basicos.",
+    keywords: ["youtube metadata viewer", "ver metadatos youtube", "youtube video id", "youtube embed"],
+    status: "Disponible",
+    processing: "client",
+    output: "metadata"
+  },
+  {
+    ...youtubeBase,
+    slug: "youtube-shorts-downloader",
+    route: "/youtube/youtube-shorts-downloader",
+    title: "YouTube Shorts Downloader",
+    h1: "YouTube Shorts Downloader",
+    group: "Shorts",
+    description: "Prepara enlaces de Shorts, muestra vista previa y deja listo el flujo de descarga para contenido propio o autorizado.",
+    keywords: ["youtube shorts downloader", "descargar shorts youtube", "youtube shorts mp4"],
+    status: "Requiere backend",
+    processing: "backend-required",
+    output: "video"
+  },
+  {
+    ...youtubeBase,
+    slug: "youtube-playlist-downloader",
+    route: "/youtube/youtube-playlist-downloader",
+    title: "YouTube Playlist Downloader",
+    h1: "YouTube Playlist Downloader",
+    group: "Playlists",
+    description: "Detecta enlaces de playlist de YouTube y prepara una descarga por lotes cuando se conecte el backend.",
+    keywords: ["youtube playlist downloader", "descargar playlist youtube", "playlist youtube mp3"],
+    status: "Requiere backend",
+    processing: "backend-required",
+    output: "video"
+  },
+  {
+    ...youtubeBase,
+    slug: "youtube-transcript-extractor",
+    route: "/youtube/youtube-transcript-extractor",
+    title: "YouTube Transcript Extractor",
+    h1: "Extraer transcripcion de YouTube",
+    group: "Texto",
+    description: "Herramienta preparada para extraer transcripciones disponibles de videos de YouTube cuando se conecte un backend.",
+    keywords: ["youtube transcript extractor", "transcripcion youtube", "subtitulos youtube", "extraer texto video"],
+    status: "Requiere backend",
+    processing: "backend-required",
+    output: "text"
+  },
+  {
+    ...youtubeBase,
+    slug: "youtube-tags-extractor",
+    route: "/youtube/youtube-tags-extractor",
+    title: "YouTube Tags Extractor",
+    h1: "Extraer tags de YouTube",
+    group: "SEO YouTube",
+    description: "Analiza enlaces de YouTube y deja preparada la extraccion de etiquetas y datos SEO con backend.",
+    keywords: ["youtube tags extractor", "extraer tags youtube", "etiquetas youtube", "seo youtube"],
+    status: "Requiere backend",
+    processing: "backend-required",
+    output: "metadata"
   }
 ];
 
@@ -388,7 +507,10 @@ export function getToolsByCategory(slug: string) {
 }
 
 export function getRelatedTools(tool: Tool, limit = 6) {
-  return tools.filter((item) => item.route !== tool.route).slice(0, limit);
+  return tools
+    .filter((item) => item.route !== tool.route)
+    .sort((left, right) => Number(right.categorySlug === tool.categorySlug) - Number(left.categorySlug === tool.categorySlug))
+    .slice(0, limit);
 }
 
 export function groupToolsByLabel(categoryTools: Tool[]) {

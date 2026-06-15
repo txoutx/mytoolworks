@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileText, UploadCloud, X } from "lucide-react";
+import type { ReactNode } from "react";
+import { rawTimeZones } from "@vvo/tzdb";
+import { BadgeInfo, Download, FileText, HardDrive, ImageDown, Link2, Music, UploadCloud, Video, X } from "lucide-react";
 import type { Tool } from "../data/tools";
 import type { Locale } from "../../lib/i18n";
 
@@ -76,12 +78,304 @@ export function ToolRunner({ tool, locale = "es" }: RunnerProps) {
   if (tool.kind === "salary") return <SalaryCalculator />;
   if (tool.slug === "hora-mundial") return <WorldClockConverter tool={tool} locale={locale} />;
   if (tool.kind === "converter") return <UnitConverter tool={tool} locale={locale} />;
+  if (tool.kind === "youtube") return <YouTubeTool tool={tool} locale={locale} />;
   if (tool.kind === "scientific") return <ScientificCalculator />;
   if (tool.kind === "cv") return <CvGenerator />;
   if (tool.kind === "letter") return <LetterGenerator />;
   if (tool.kind === "summary") return <TextSummarizer />;
   if (tool.kind === "grammar") return <GrammarChecker />;
   return <PdfUploader tool={tool} locale={locale} />;
+}
+
+type YouTubeInfo = {
+  videoId: string;
+  playlistId?: string;
+  canonicalUrl: string;
+  embedUrl: string;
+  shortsUrl: string;
+};
+
+type OEmbedInfo = {
+  title?: string;
+  author_name?: string;
+  provider_name?: string;
+};
+
+const youtubeText = {
+  es: {
+    label: "URL de YouTube",
+    placeholder: "https://www.youtube.com/watch?v=...",
+    pasteHelp: "Admite enlaces de youtube.com, youtu.be, Shorts y playlists.",
+    invalid: "Pega una URL valida de YouTube para ver la informacion.",
+    preview: "Vista previa",
+    details: "Datos detectados",
+    videoId: "ID del video",
+    playlistId: "ID de playlist",
+    cleanUrl: "URL limpia",
+    embedUrl: "URL embed",
+    duration: "Duracion del video",
+    durationHelp: "Introduce la duracion para calcular tamanos estimados. La duracion automatica requiere backend.",
+    minutes: "Minutos",
+    seconds: "Segundos",
+    estimates: "Tamanos estimados",
+    thumbnails: "Miniaturas disponibles",
+    open: "Abrir",
+    download: "Descargar",
+    backendTitle: "Descarga directa pendiente de backend",
+    backendBody: "Para MP3/MP4 hace falta un servidor que valide permisos, obtenga el medio y genere el archivo temporal. Usalo solo con contenido propio, con licencia o con permiso del titular.",
+    readyTitle: "Herramienta disponible en navegador",
+    readyBody: "Puedes extraer miniaturas, copiar URLs limpias y revisar datos basicos sin subir archivos.",
+    title: "Titulo",
+    author: "Canal",
+    unavailable: "No disponible"
+  },
+  en: {
+    label: "YouTube URL",
+    placeholder: "https://www.youtube.com/watch?v=...",
+    pasteHelp: "Supports youtube.com, youtu.be, Shorts and playlist links.",
+    invalid: "Paste a valid YouTube URL to see the information.",
+    preview: "Preview",
+    details: "Detected data",
+    videoId: "Video ID",
+    playlistId: "Playlist ID",
+    cleanUrl: "Clean URL",
+    embedUrl: "Embed URL",
+    duration: "Video duration",
+    durationHelp: "Enter duration to calculate estimated sizes. Automatic duration requires a backend.",
+    minutes: "Minutes",
+    seconds: "Seconds",
+    estimates: "Estimated sizes",
+    thumbnails: "Available thumbnails",
+    open: "Open",
+    download: "Download",
+    backendTitle: "Direct download pending backend",
+    backendBody: "MP3/MP4 needs a server to validate permissions, fetch media and generate a temporary file. Use it only with your own, licensed or permitted content.",
+    readyTitle: "Browser tool available",
+    readyBody: "You can extract thumbnails, copy clean URLs and review basic data without uploading files.",
+    title: "Title",
+    author: "Channel",
+    unavailable: "Unavailable"
+  }
+} as const;
+
+const mp3Qualities = [
+  { label: "64 kbps", kbps: 64 },
+  { label: "128 kbps", kbps: 128 },
+  { label: "192 kbps", kbps: 192 },
+  { label: "256 kbps", kbps: 256 },
+  { label: "320 kbps", kbps: 320 }
+];
+
+const mp4Qualities = [
+  { label: "144p", mbPerMinute: 1.2 },
+  { label: "240p", mbPerMinute: 2.4 },
+  { label: "360p", mbPerMinute: 4.5 },
+  { label: "480p", mbPerMinute: 7 },
+  { label: "720p HD", mbPerMinute: 14 },
+  { label: "1080p Full HD", mbPerMinute: 26 },
+  { label: "1440p", mbPerMinute: 45 },
+  { label: "4K", mbPerMinute: 95 }
+];
+
+function YouTubeTool({ tool, locale }: { tool: Tool; locale: Locale }) {
+  const t = youtubeText[locale];
+  const [url, setUrl] = useState("");
+  const [minutes, setMinutes] = useState(3);
+  const [seconds, setSeconds] = useState(0);
+  const [oembed, setOembed] = useState<OEmbedInfo | null>(null);
+  const info = useMemo(() => parseYouTubeUrl(url), [url]);
+  const durationMinutes = Math.max(0, minutes) + Math.max(0, Math.min(59, seconds)) / 60;
+  const isVideoTool = tool.output === "video";
+  const isAudioTool = tool.output === "audio";
+  const estimateRows = isAudioTool
+    ? mp3Qualities.map((quality) => ({
+        label: quality.label,
+        value: formatMegabytes((quality.kbps * durationMinutes * 60) / 8 / 1024)
+      }))
+    : mp4Qualities.map((quality) => ({
+        label: quality.label,
+        value: formatMegabytes(quality.mbPerMinute * durationMinutes)
+      }));
+
+  useEffect(() => {
+    if (!info) {
+      setOembed(null);
+      return;
+    }
+
+    let cancelled = false;
+    fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(info.canonicalUrl)}&format=json`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: OEmbedInfo | null) => {
+        if (!cancelled) setOembed(data);
+      })
+      .catch(() => {
+        if (!cancelled) setOembed(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [info]);
+
+  return (
+    <div className="tool-workspace youtube-workspace">
+      <div className="form-grid">
+        <div className="field">
+          <label htmlFor="youtube-url">{t.label}</label>
+          <input
+            id="youtube-url"
+            type="url"
+            value={url}
+            placeholder={t.placeholder}
+            onChange={(event) => setUrl(event.target.value)}
+          />
+          <p className="option-note">{t.pasteHelp}</p>
+        </div>
+      </div>
+
+      {!info && <div className="tool-status processing">{t.invalid}</div>}
+
+      {info && (
+        <div className="youtube-grid">
+          <section className="youtube-panel">
+            <h2>{t.preview}</h2>
+            <div className="youtube-embed">
+              <iframe
+                title="YouTube preview"
+                src={info.embedUrl}
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+          </section>
+
+          <section className="youtube-panel">
+            <h2>{t.details}</h2>
+            <div className="youtube-data-list">
+              <YouTubeDataRow icon={<BadgeInfo size={16} />} label={t.title} value={oembed?.title ?? t.unavailable} />
+              <YouTubeDataRow icon={<BadgeInfo size={16} />} label={t.author} value={oembed?.author_name ?? t.unavailable} />
+              <YouTubeDataRow icon={<Link2 size={16} />} label={t.videoId} value={info.videoId} />
+              {info.playlistId && <YouTubeDataRow icon={<Link2 size={16} />} label={t.playlistId} value={info.playlistId} />}
+              <YouTubeDataRow icon={<Link2 size={16} />} label={t.cleanUrl} value={info.canonicalUrl} href={info.canonicalUrl} />
+              <YouTubeDataRow icon={<Link2 size={16} />} label={t.embedUrl} value={info.embedUrl} href={info.embedUrl} />
+            </div>
+          </section>
+
+          <section className="youtube-panel">
+            <h2>{t.duration}</h2>
+            <div className="youtube-duration">
+              <label>
+                <span>{t.minutes}</span>
+                <input type="number" min="0" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} />
+              </label>
+              <label>
+                <span>{t.seconds}</span>
+                <input type="number" min="0" max="59" value={seconds} onChange={(event) => setSeconds(Number(event.target.value))} />
+              </label>
+            </div>
+            <p className="option-note">{t.durationHelp}</p>
+          </section>
+
+          {(isAudioTool || isVideoTool) && (
+            <section className="youtube-panel">
+              <h2>{t.estimates}</h2>
+              <div className="youtube-quality-list">
+                {estimateRows.map((row) => (
+                  <div className="youtube-quality-row" key={row.label}>
+                    <span>{isAudioTool ? <Music size={16} /> : <Video size={16} />} {row.label}</span>
+                    <strong><HardDrive size={16} /> {row.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="youtube-panel youtube-panel-wide">
+            <h2>{t.thumbnails}</h2>
+            <div className="youtube-thumbnail-grid">
+              {getYouTubeThumbnails(info.videoId).map((thumbnail) => (
+                <a href={thumbnail.url} target="_blank" rel="noreferrer" className="youtube-thumbnail" key={thumbnail.label}>
+                  <img src={thumbnail.url} alt={`${thumbnail.label} thumbnail`} loading="lazy" />
+                  <span><ImageDown size={15} /> {thumbnail.label}</span>
+                </a>
+              ))}
+            </div>
+          </section>
+
+          <section className={`tool-status ${tool.processing === "client" ? "done" : "processing"} youtube-panel-wide`}>
+            <strong>{tool.processing === "client" ? t.readyTitle : t.backendTitle}</strong>
+            <p>{tool.processing === "client" ? t.readyBody : t.backendBody}</p>
+            <a className="button secondary" href={info.canonicalUrl} target="_blank" rel="noreferrer">
+              <Download size={16} /> {tool.processing === "client" ? t.open : t.download}
+            </a>
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function YouTubeDataRow({ icon, label, value, href }: { icon: ReactNode; label: string; value: string; href?: string }) {
+  return (
+    <div className="youtube-data-row">
+      <span>{icon}{label}</span>
+      {href ? (
+        <a href={href} target="_blank" rel="noreferrer">{value}</a>
+      ) : (
+        <strong>{value}</strong>
+      )}
+    </div>
+  );
+}
+
+function parseYouTubeUrl(value: string): YouTubeInfo | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  try {
+    const url = new URL(trimmed);
+    const host = url.hostname.replace(/^www\./, "");
+    let videoId = "";
+
+    if (host === "youtu.be") {
+      videoId = url.pathname.split("/").filter(Boolean)[0] ?? "";
+    } else if (host === "youtube.com" || host === "m.youtube.com" || host === "music.youtube.com") {
+      if (url.pathname === "/watch") videoId = url.searchParams.get("v") ?? "";
+      if (url.pathname.startsWith("/shorts/")) videoId = url.pathname.split("/").filter(Boolean)[1] ?? "";
+      if (url.pathname.startsWith("/embed/")) videoId = url.pathname.split("/").filter(Boolean)[1] ?? "";
+    }
+
+    if (!/^[\w-]{11}$/.test(videoId)) return null;
+
+    const playlistId = url.searchParams.get("list") ?? undefined;
+    const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}${playlistId ? `&list=${playlistId}` : ""}`;
+    return {
+      videoId,
+      playlistId,
+      canonicalUrl,
+      embedUrl: `https://www.youtube.com/embed/${videoId}`,
+      shortsUrl: `https://www.youtube.com/shorts/${videoId}`
+    };
+  } catch {
+    return null;
+  }
+}
+
+function getYouTubeThumbnails(videoId: string) {
+  return [
+    { label: "MaxRes", url: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` },
+    { label: "SD", url: `https://img.youtube.com/vi/${videoId}/sddefault.jpg` },
+    { label: "HQ", url: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` },
+    { label: "MQ", url: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` }
+  ];
+}
+
+function formatMegabytes(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0 MB";
+  if (value >= 1024) return `${(value / 1024).toFixed(2)} GB`;
+  return `${value.toFixed(value >= 10 ? 1 : 2)} MB`;
 }
 
 function PdfUploader({ tool, locale }: { tool: Tool; locale: Locale }) {
@@ -946,7 +1240,11 @@ function WorldClockConverter({ tool, locale }: { tool: Tool; locale: Locale }) {
     const normalized = normalizeSearch(query);
     if (!normalized) return zones.slice(0, 18);
     return zones
-      .filter((zone) => normalizeSearch(`${zone.label} ${zone.enLabel} ${zone.timeZone}`).includes(normalized))
+      .filter((zone) =>
+        normalizeSearch(
+          `${zone.label} ${zone.enLabel} ${zone.countryName} ${zone.enCountryName} ${zone.countryCode} ${zone.cities.join(" ")} ${zone.timeZone}`
+        ).includes(normalized)
+      )
       .slice(0, 60);
   }, [query, zones]);
   const popularZones = useMemo(
@@ -1065,7 +1363,7 @@ const worldClockLabels = {
     local: "Hora local",
     selected: "Hora seleccionada",
     search: "Buscar pais, ciudad o zona horaria",
-    placeholder: "Ej: Japon, New York, Madrid, Argentina...",
+    placeholder: "Ej: España, Japón, Nueva York, México, Argentina...",
     results: "Zonas horarias",
     popular: "Horas populares"
   },
@@ -1073,16 +1371,26 @@ const worldClockLabels = {
     local: "Local time",
     selected: "Selected time",
     search: "Search country, city or time zone",
-    placeholder: "Example: Japan, New York, Madrid, Argentina...",
+    placeholder: "Example: Spain, Japan, New York, Mexico, Argentina...",
     results: "Time zones",
     popular: "Popular times"
   }
 } as const;
 
+type WorldClockZone = {
+  timeZone: string;
+  label: string;
+  enLabel: string;
+  countryName: string;
+  enCountryName: string;
+  countryCode: string;
+  cities: string[];
+};
+
 const worldClockAliases: Record<string, { label: string; enLabel: string }> = {
-  "Europe/Madrid": { label: "Espana - Madrid", enLabel: "Spain - Madrid" },
+  "Europe/Madrid": { label: "España - Madrid", enLabel: "Spain - Madrid" },
   "Europe/London": { label: "Reino Unido - Londres", enLabel: "United Kingdom - London" },
-  "Europe/Paris": { label: "Francia - Paris", enLabel: "France - Paris" },
+  "Europe/Paris": { label: "Francia - París", enLabel: "France - Paris" },
   "Europe/Berlin": { label: "Alemania - Berlin", enLabel: "Germany - Berlin" },
   "America/New_York": { label: "Estados Unidos - Nueva York", enLabel: "United States - New York" },
   "America/Los_Angeles": { label: "Estados Unidos - Los Angeles", enLabel: "United States - Los Angeles" },
@@ -1091,7 +1399,7 @@ const worldClockAliases: Record<string, { label: string; enLabel: string }> = {
   "America/Argentina/Buenos_Aires": { label: "Argentina - Buenos Aires", enLabel: "Argentina - Buenos Aires" },
   "America/Sao_Paulo": { label: "Brasil - Sao Paulo", enLabel: "Brazil - Sao Paulo" },
   "Asia/Dubai": { label: "Emiratos - Dubai", enLabel: "UAE - Dubai" },
-  "Asia/Tokyo": { label: "Japon - Tokio", enLabel: "Japan - Tokyo" },
+  "Asia/Tokyo": { label: "Japón - Tokio", enLabel: "Japan - Tokyo" },
   "Asia/Shanghai": { label: "China - Shanghai", enLabel: "China - Shanghai" },
   "Asia/Kolkata": { label: "India - Nueva Delhi", enLabel: "India - New Delhi" },
   "Australia/Sydney": { label: "Australia - Sidney", enLabel: "Australia - Sydney" }
@@ -1110,19 +1418,28 @@ const popularWorldClockZones = [
   "Australia/Sydney"
 ];
 
-function getWorldClockZones(locale: Locale) {
-  const supported =
-    typeof Intl.supportedValuesOf === "function"
-      ? Intl.supportedValuesOf("timeZone")
-      : Object.keys(worldClockAliases);
-  return supported
-    .map((timeZone) => {
-      const alias = worldClockAliases[timeZone];
-      const fallback = timeZoneToLabel(timeZone);
+function getWorldClockZones(locale: Locale): WorldClockZone[] {
+  const regionNames = typeof Intl.DisplayNames === "function" ? new Intl.DisplayNames([locale === "en" ? "en" : "es"], { type: "region" }) : null;
+  const seen = new Set<string>();
+
+  return rawTimeZones
+    .filter((zone) => {
+      if (!zone.countryCode || seen.has(zone.name)) return false;
+      seen.add(zone.name);
+      return true;
+    })
+    .map((zone) => {
+      const alias = worldClockAliases[zone.name];
+      const localizedCountry = regionNames?.of(zone.countryCode) ?? zone.countryName;
+      const cityLabel = zone.mainCities.length > 0 ? zone.mainCities.slice(0, 2).join(", ") : timeZoneToLabel(zone.name);
       return {
-        timeZone,
-        label: alias?.label ?? fallback,
-        enLabel: alias?.enLabel ?? fallback
+        timeZone: zone.name,
+        label: alias?.label ?? `${localizedCountry} - ${cityLabel}`,
+        enLabel: alias?.enLabel ?? `${zone.countryName} - ${cityLabel}`,
+        countryName: localizedCountry,
+        enCountryName: zone.countryName,
+        countryCode: zone.countryCode,
+        cities: zone.mainCities
       };
     })
     .sort((a, b) => (locale === "en" ? a.enLabel.localeCompare(b.enLabel) : a.label.localeCompare(b.label)));

@@ -9,13 +9,14 @@ export function Header({ locale = "es" }: { locale?: Locale }) {
     <header className="site-header">
       <nav className="container nav" aria-label="Navegacion principal">
         <Link href={withLocalePath("/", locale)} className="brand" aria-label="MyToolWorks inicio">
-          <Image src="/icono.png" alt="" width={34} height={34} className="brand-logo" priority />
+          <Image src="/favicon-48x48.png" alt="" width={34} height={34} className="brand-logo" priority />
           <span>MyToolWorks</span>
         </Link>
         <div className="nav-links">
           <Link href={withLocalePath("/pdf", locale)}>{t.navPdf}</Link>
           <Link href={withLocalePath("/img", locale)}>{t.navImage}</Link>
           <Link href={withLocalePath("/conversor", locale)}>{t.navConverter}</Link>
+          <Link href={withLocalePath("/youtube", locale)}>{t.navYouTube}</Link>
         </div>
       </nav>
     </header>

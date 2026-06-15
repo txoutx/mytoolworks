@@ -55,6 +55,7 @@ export function CookieConsent({ locale }: { locale: Locale }) {
 
   function saveChoice(choice: "accepted" | "rejected") {
     window.localStorage.setItem(storageKey, choice);
+    window.dispatchEvent(new Event("mytoolworks-cookie-choice"));
     setVisible(false);
     window.Cookiebot?.hide?.();
   }
