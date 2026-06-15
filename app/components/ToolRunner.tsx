@@ -105,13 +105,18 @@ const audioText = {
     trim: "Cortar audio",
     merge: "Unir audios",
     waveform: "Forma de onda",
-    timeline: "Timeline de cortes",
-    addCut: "Anadir corte al timeline",
+    library: "Biblioteca",
+    timeline: "Timeline",
+    addCut: "Anadir seleccion al timeline",
+    addToTimeline: "Enviar al timeline",
     clearCuts: "Limpiar cortes",
     moveLeft: "Mover antes",
     moveRight: "Mover despues",
     removeCut: "Quitar corte",
-    noCuts: "Crea cortes visuales para reordenarlos o usa el audio seleccionado completo.",
+    noCuts: "Arrastra audios aqui o envialos desde la biblioteca para construir el timeline.",
+    selectedClip: "Clip seleccionado",
+    downloadSelection: "Generar seleccion",
+    downloadTimeline: "Generar timeline",
     renderedPreview: "Preescucha del resultado",
     activeFile: "Audio activo",
     start: "Inicio",
@@ -147,13 +152,18 @@ const audioText = {
     trim: "Cut audio",
     merge: "Merge audio",
     waveform: "Waveform",
-    timeline: "Cut timeline",
-    addCut: "Add cut to timeline",
+    library: "Library",
+    timeline: "Timeline",
+    addCut: "Add selection to timeline",
+    addToTimeline: "Send to timeline",
     clearCuts: "Clear cuts",
     moveLeft: "Move earlier",
     moveRight: "Move later",
     removeCut: "Remove cut",
-    noCuts: "Create visual cuts to reorder them or use the selected audio directly.",
+    noCuts: "Drag audio files here or send them from the library to build the timeline.",
+    selectedClip: "Selected clip",
+    downloadSelection: "Generate selection",
+    downloadTimeline: "Generate timeline",
     renderedPreview: "Rendered preview",
     activeFile: "Active audio",
     start: "Start",
@@ -190,9 +200,11 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
   const [files, setFiles] = useState<File[]>([]);
   const [buffers, setBuffers] = useState<AudioBuffer[]>([]);
   const [clips, setClips] = useState<AudioClip[]>([]);
+  const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
+  const [draggedFileIndex, setDraggedFileIndex] = useState<number | null>(null);
+  const [draggedClipId, setDraggedClipId] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [previewUrl, setPreviewUrl] = useState("");
-  const [mode, setMode] = useState<"trim" | "merge">("trim");
   const [startPct, setStartPct] = useState(0);
   const [endPct, setEndPct] = useState(100);
   const [fadeIn, setFadeIn] = useState(0.25);
@@ -249,6 +261,7 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
       setFiles(incoming);
       setBuffers(decoded);
       setClips([]);
+      setSelectedClipId(null);
       setActiveIndex(0);
       setStartPct(0);
       setEndPct(100);
@@ -277,20 +290,35 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
 
   function addCutToTimeline() {
     if (!activeBuffer || !files[activeIndex]) return;
-    setClips((current) => [
-      ...current,
-      {
+    const nextClip = {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      fileIndex: activeIndex,
+      start: startSeconds,
+      end: endSeconds,
+      label: files[activeIndex].name
+    };
+    setClips((current) => [...current, nextClip]);
+    setSelectedClipId(nextClip.id);
+  }
+
+  function addFileToTimeline(index: number) {
+    const buffer = buffers[index];
+    const file = files[index];
+    if (!buffer || !file) return;
+    const nextClip = {
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        fileIndex: activeIndex,
-        start: startSeconds,
-        end: endSeconds,
-        label: files[activeIndex].name
-      }
-    ]);
+        fileIndex: index,
+        start: 0,
+        end: buffer.duration,
+        label: file.name
+    };
+    setClips((current) => [...current, nextClip]);
+    selectClip(nextClip);
   }
 
   function removeClip(id: string) {
     setClips((current) => current.filter((clip) => clip.id !== id));
+    if (selectedClipId === id) setSelectedClipId(null);
   }
 
   function moveClip(id: string, direction: -1 | 1) {
@@ -302,7 +330,25 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
     });
   }
 
+  function dropClip(targetId: string) {
+    if (!draggedClipId || draggedClipId === targetId) return;
+    setClips((current) => {
+      const from = current.findIndex((clip) => clip.id === draggedClipId);
+      const to = current.findIndex((clip) => clip.id === targetId);
+      if (from < 0 || to < 0) return current;
+      return moveArrayItem(current, from, to);
+    });
+    setDraggedClipId(null);
+  }
+
+  function dropFileOnTimeline() {
+    if (draggedFileIndex === null) return;
+    addFileToTimeline(draggedFileIndex);
+    setDraggedFileIndex(null);
+  }
+
   function selectClip(clip: AudioClip) {
+    setSelectedClipId(clip.id);
     setActiveIndex(clip.fileIndex);
     const buffer = buffers[clip.fileIndex];
     if (!buffer) return;
@@ -310,7 +356,25 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
     setEndPct(Math.max(1, Math.min(100, (clip.end / buffer.duration) * 100)));
   }
 
-  async function processAudio() {
+  function updateSelection(nextStartPct = startPct, nextEndPct = endPct) {
+    const buffer = activeBuffer;
+    if (!buffer) return;
+    const safeStart = Math.max(0, Math.min(99, nextStartPct));
+    const safeEnd = Math.max(safeStart + 1, Math.min(100, nextEndPct));
+    setStartPct(safeStart);
+    setEndPct(safeEnd);
+    if (selectedClipId && !isEnhancer) {
+      setClips((current) =>
+        current.map((clip) =>
+          clip.id === selectedClipId
+            ? { ...clip, fileIndex: activeIndex, start: (safeStart / 100) * buffer.duration, end: (safeEnd / 100) * buffer.duration }
+            : clip
+        )
+      );
+    }
+  }
+
+  async function processAudio(target: "selection" | "timeline") {
     if (!buffers.length) {
       setStatus("error");
       setMessage(t.noFile);
@@ -323,11 +387,9 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
 
     try {
       const source =
-        clips.length && !isEnhancer
+        target === "timeline" && clips.length && !isEnhancer
           ? renderAudioClips(clips, buffers)
-          : mode === "merge" && !isEnhancer
-            ? mergeAudioBuffers(buffers)
-            : cropAudioBuffer(activeBuffer, startSeconds, endSeconds);
+          : cropAudioBuffer(activeBuffer, startSeconds, endSeconds);
       let processed = source;
       processed = applyFades(processed, fadeIn, fadeOut);
       if (removeSilence) processed = removeSilentSections(processed, silenceThreshold);
@@ -351,7 +413,7 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
         setResultUrl(URL.createObjectURL(blob));
       } else {
         const blob = audioBufferToWav(processed);
-        setResultName(`${safeAudioName(files[activeIndex]?.name ?? "audio")}.wav`);
+        setResultName(`${target === "timeline" ? "timeline" : safeAudioName(files[activeIndex]?.name ?? "audio")}.wav`);
         setResultUrl(URL.createObjectURL(blob));
       }
 
@@ -375,13 +437,21 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
       {!!files.length && (
         <div className="audio-grid">
           <section className="audio-panel">
-            <h2>{t.activeFile}</h2>
+            <h2>{t.library}</h2>
             <div className="audio-file-list">
               {files.map((file, index) => (
-                <button type="button" className={index === activeIndex ? "active" : ""} onClick={() => setActiveIndex(index)} key={`${file.name}-${index}`}>
-                  <span>{file.name}</span>
-                  <small>{formatFileSize(file.size)}</small>
-                </button>
+                <div
+                  className={`audio-file-item ${index === activeIndex ? "active" : ""}`}
+                  draggable={!isEnhancer}
+                  onDragStart={() => setDraggedFileIndex(index)}
+                  key={`${file.name}-${index}`}
+                >
+                  <button type="button" onClick={() => { setActiveIndex(index); setSelectedClipId(null); setStartPct(0); setEndPct(100); }}>
+                    <span>{file.name}</span>
+                    <small>{formatFileSize(file.size)}</small>
+                  </button>
+                  {!isEnhancer && <button type="button" className="audio-file-add" onClick={() => addFileToTimeline(index)}>{t.addToTimeline}</button>}
+                </div>
               ))}
             </div>
             {previewUrl && <audio ref={audioRef} src={previewUrl} controls preload="metadata" />}
@@ -389,21 +459,15 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
           </section>
 
           <section className="audio-panel">
-            <h2>{isEnhancer ? t.convertFormat : t.editorMode}</h2>
-            {!isEnhancer && (
-              <div className="segmented-wrap">
-                <button type="button" className={`small-action ${mode === "trim" ? "active" : ""}`} onClick={() => setMode("trim")}>{t.trim}</button>
-                <button type="button" className={`small-action ${mode === "merge" ? "active" : ""}`} onClick={() => setMode("merge")}>{t.merge}</button>
-              </div>
-            )}
+            <h2>{selectedClipId ? t.selectedClip : t.activeFile}</h2>
             <div className="field-row">
               <label className="audio-range-label">
                 <span>{t.start}: {formatDuration(startSeconds)}</span>
-                <input type="range" min="0" max="99" value={startPct} disabled={mode === "merge" && !isEnhancer} onChange={(event) => setStartPct(Math.min(Number(event.target.value), endPct - 1))} />
+                <input type="range" min="0" max="99" value={startPct} onChange={(event) => updateSelection(Math.min(Number(event.target.value), endPct - 1), endPct)} />
               </label>
               <label className="audio-range-label">
                 <span>{t.end}: {formatDuration(endSeconds)}</span>
-                <input type="range" min="1" max="100" value={endPct} disabled={mode === "merge" && !isEnhancer} onChange={(event) => setEndPct(Math.max(Number(event.target.value), startPct + 1))} />
+                <input type="range" min="1" max="100" value={endPct} onChange={(event) => updateSelection(startPct, Math.max(Number(event.target.value), startPct + 1))} />
               </label>
             </div>
             <div className="audio-waveform-wrap">
@@ -439,9 +503,21 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
                 {!!clips.length && <button type="button" className="small-action" onClick={() => setClips([])}>{t.clearCuts}</button>}
               </div>
               {clips.length ? (
-                <div className="audio-timeline">
+                <div
+                  className="audio-timeline"
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={dropFileOnTimeline}
+                >
                   {clips.map((clip, index) => (
-                    <article className="audio-clip" key={clip.id} onClick={() => selectClip(clip)}>
+                    <article
+                      className={`audio-clip ${clip.id === selectedClipId ? "active" : ""}`}
+                      draggable
+                      onClick={() => selectClip(clip)}
+                      onDragStart={() => setDraggedClipId(clip.id)}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => { event.stopPropagation(); dropClip(clip.id); }}
+                      key={clip.id}
+                    >
                       <div>
                         <strong>{index + 1}. {clip.label}</strong>
                         <span>{formatDuration(clip.start)} - {formatDuration(clip.end)} ({formatDuration(clip.end - clip.start)})</span>
@@ -455,7 +531,13 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
                   ))}
                 </div>
               ) : (
-                <p className="option-note">{t.noCuts}</p>
+                <div
+                  className="audio-timeline audio-timeline-empty"
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={dropFileOnTimeline}
+                >
+                  <p className="option-note">{t.noCuts}</p>
+                </div>
               )}
             </section>
           )}
@@ -500,7 +582,10 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
               </select>
             </label>
             <p className="option-note">{t.note}</p>
-            <button type="button" className="button process-button" onClick={processAudio}>{t.process}</button>
+            <div className="audio-export-actions">
+              <button type="button" className="button process-button" onClick={() => processAudio("selection")}>{t.downloadSelection}</button>
+              {!isEnhancer && <button type="button" className="button secondary process-button" onClick={() => processAudio("timeline")}>{t.downloadTimeline}</button>}
+            </div>
             {message && <div className={`tool-status ${status}`}>{message}</div>}
             {resultUrl && (
               <>
