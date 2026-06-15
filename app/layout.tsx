@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { CookieConsent } from "./components/CookieConsent";
 import { ThirdPartyScripts } from "./components/ThirdPartyScripts";
 import "./globals.css";
 
@@ -51,7 +50,6 @@ export default async function RootLayout({
 
       <body>
         {children}
-        <CookieConsent locale={locale} />
         <ThirdPartyScripts />
       </body>
     </html>
