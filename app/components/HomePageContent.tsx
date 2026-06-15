@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeftRight, FileImage, FileText, Music2 } from "lucide-react";
+import { ArrowLeftRight, FileImage, FileText, Film, Music2 } from "lucide-react";
 import type { Locale } from "../../lib/i18n";
 import { ui, withLocalePath } from "../../lib/i18n";
 import { AdSlot, Footer, Header } from "./SiteChrome";
@@ -79,6 +79,20 @@ export function HomePageContent({ locale }: { locale: Locale }) {
                   <span>{locale === "en" ? "Enhance" : "Mejorar"}</span>
                 </div>
                 <footer>{t.openAudio}</footer>
+              </Link>
+
+              <Link href={withLocalePath("/video", locale)} className="home-category-card">
+                <div className="home-category-icon" aria-hidden="true">
+                  <Film size={28} />
+                </div>
+                <h2>{t.homeVideoTitle}</h2>
+                <p>{t.homeVideoDescription}</p>
+                <div className="category-preview-list">
+                  <span>{locale === "en" ? "Cut" : "Cortar"}</span>
+                  <span>{locale === "en" ? "Merge" : "Unir"}</span>
+                  <span>Crop</span>
+                </div>
+                <footer>{t.openVideo}</footer>
               </Link>
             </div>
           </div>

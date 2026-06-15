@@ -16,6 +16,7 @@ export function Header({ locale = "es" }: { locale?: Locale }) {
           <Link href={withLocalePath("/pdf", locale)}>{t.navPdf}</Link>
           <Link href={withLocalePath("/img", locale)}>{t.navImage}</Link>
           <Link href={withLocalePath("/audio", locale)}>{t.navAudio}</Link>
+          <Link href={withLocalePath("/video", locale)}>{t.navVideo}</Link>
           <Link href={withLocalePath("/conversor", locale)}>{t.navConverter}</Link>
         </div>
       </nav>

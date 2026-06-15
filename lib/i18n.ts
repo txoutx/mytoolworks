@@ -20,6 +20,7 @@ export const ui = {
     navImage: "Imagen",
     navConverter: "Conversores",
     navAudio: "Audio",
+    navVideo: "Video",
     footerTagline: "Herramientas online rapidas y limpias. Hecho por txoutx.",
     privacy: "Privacidad",
     cookies: "Cookies",
@@ -34,7 +35,7 @@ export const ui = {
     sideAd: "Anuncio lateral",
     related: "Relacionadas",
     homeEyebrow: "Herramientas online",
-    homeLead: "Elige una categoria y trabaja con PDFs, imagenes, audio o conversores directamente desde el navegador.",
+    homeLead: "Elige una categoria y trabaja con PDFs, imagenes, audio, video o conversores directamente desde el navegador.",
     homePdfDescription: "Une, divide, comprime, rota, ordena, convierte a imagen y firma archivos PDF.",
     homeImageTitle: "Imagen",
     homeImageDescription: "Edita imagenes, crea collages, cambia el lienzo, convierte formatos y descarga el resultado.",
@@ -42,10 +43,13 @@ export const ui = {
     homeConverterDescription: "Convierte divisas, unidades, horas, zonas horarias, temperatura, peso, datos digitales, area, volumen y energia.",
     homeAudioTitle: "Audio",
     homeAudioDescription: "Corta, une, convierte, comprime, limpia y mejora audios sin subirlos a un servidor.",
+    homeVideoTitle: "Video",
+    homeVideoDescription: "Corta, une, recorta, ajusta y exporta videos con un timeline visual.",
     openPdf: "Abrir PDF",
     openImage: "Abrir imagen",
     openConverter: "Abrir conversores",
     openAudio: "Abrir audio",
+    openVideo: "Abrir video",
     imageEyebrow: "Imagen",
     imageTitle: "Herramientas de imagen online",
     imageLead: "Edita, combina, comprime, convierte, redimensiona y descarga imagenes directamente desde el navegador."
@@ -55,6 +59,7 @@ export const ui = {
     navImage: "Images",
     navConverter: "Converters",
     navAudio: "Audio",
+    navVideo: "Video",
     footerTagline: "Fast, clean online tools. Made by txoutx.",
     privacy: "Privacy",
     cookies: "Cookies",
@@ -69,7 +74,7 @@ export const ui = {
     sideAd: "Side ad",
     related: "Related tools",
     homeEyebrow: "Online tools",
-    homeLead: "Choose a category and work with PDFs, images, audio or converters directly in your browser.",
+    homeLead: "Choose a category and work with PDFs, images, audio, video or converters directly in your browser.",
     homePdfDescription: "Merge, split, compress, rotate, reorder, convert to images and sign PDF files.",
     homeImageTitle: "Images",
     homeImageDescription: "Edit images, create collages, change the canvas, convert formats and download the result.",
@@ -77,10 +82,13 @@ export const ui = {
     homeConverterDescription: "Convert currencies, units, time zones, temperature, weight, digital data, area, volume and energy.",
     homeAudioTitle: "Audio",
     homeAudioDescription: "Cut, merge, convert, compress, clean and enhance audio without uploading it to a server.",
+    homeVideoTitle: "Video",
+    homeVideoDescription: "Cut, merge, crop, adjust and export videos with a visual timeline.",
     openPdf: "Open PDF",
     openImage: "Open images",
     openConverter: "Open converters",
     openAudio: "Open audio",
+    openVideo: "Open video",
     imageEyebrow: "Images",
     imageTitle: "Online image tools",
     imageLead: "Edit, combine, compress, convert, resize and download images directly from your browser."
@@ -113,6 +121,12 @@ const categoryTranslations: Record<Locale, Record<string, Partial<ToolCategory>>
       shortTitle: "Audio",
       navLabel: "Audio",
       description: "Cut, merge, convert, compress, enhance and adjust audio files from your browser."
+    },
+    video: {
+      title: "Video tools",
+      shortTitle: "Video",
+      navLabel: "Video",
+      description: "Cut, merge, crop, adjust and export videos with a visual timeline."
     }
   }
 };
@@ -275,6 +289,12 @@ const toolTranslations: Record<Locale, Record<string, Partial<Tool>>> = {
       h1: "Enhance and convert audio online",
       group: "Enhance and convert",
       description: "Convert audio to WAV, adjust sample rate, normalize volume, compress dynamics, convert stereo to mono, split channels and reduce basic noise."
+    },
+    "editor-video": {
+      title: "Video editor",
+      h1: "Online video editor",
+      group: "Editing",
+      description: "Edit videos with a visual timeline: cut, merge, reorder clips, crop formats, adjust speed, volume, rotation, flip, capture frames and export WebM."
     }
   }
 };

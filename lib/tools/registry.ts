@@ -1,4 +1,4 @@
-export type ToolCategorySlug = "pdf" | "img" | "conversor" | "audio";
+export type ToolCategorySlug = "pdf" | "img" | "conversor" | "audio" | "video";
 
 export type ToolKind =
   | "pdf"
@@ -10,7 +10,8 @@ export type ToolKind =
   | "letter"
   | "summary"
   | "grammar"
-  | "audio";
+  | "audio"
+  | "video";
 
 export type ProcessingMode = "client" | "backend-required";
 
@@ -38,7 +39,7 @@ export type Tool = {
   kind: ToolKind;
   processing: ProcessingMode;
   input: "single-file" | "multi-file" | "office-file" | "html";
-  output: "pdf" | "jpg" | "text" | "calculation" | "audio";
+  output: "pdf" | "jpg" | "text" | "calculation" | "audio" | "video";
   adProfile: AdProfile;
 };
 
@@ -70,6 +71,13 @@ export const categories: ToolCategory[] = [
     shortTitle: "Audio",
     navLabel: "Audio",
     description: "Corta, une, convierte, comprime, mejora y ajusta archivos de audio desde el navegador."
+  },
+  {
+    slug: "video",
+    title: "Herramientas de video",
+    shortTitle: "Video",
+    navLabel: "Video",
+    description: "Corta, une, recorta, ajusta y exporta videos con un editor visual tipo timeline."
   }
 ];
 
@@ -97,6 +105,16 @@ const audioBase = {
   input: "multi-file" as const,
   output: "audio" as const,
   adProfile: "standard" as const
+};
+
+const videoBase = {
+  categorySlug: "video" as const,
+  kind: "video" as const,
+  status: "Disponible" as const,
+  processing: "client" as const,
+  input: "multi-file" as const,
+  output: "video" as const,
+  adProfile: "high-intent" as const
 };
 
 export const tools: Tool[] = [
@@ -403,6 +421,16 @@ export const tools: Tool[] = [
     group: "Mejora y conversion",
     description: "Convierte audio a WAV, ajusta sample rate, normaliza volumen, comprime dinamica, convierte estereo a mono, separa canales y reduce ruido basico.",
     keywords: ["convertidor audio", "mp3 a wav", "mejorar audio", "remove noise audio", "audio compressor", "sample rate converter", "stereo to mono"]
+  },
+  {
+    ...videoBase,
+    slug: "editor-video",
+    route: "/video/editor-video",
+    title: "Editor de video",
+    h1: "Editor de video online",
+    group: "Edicion",
+    description: "Edita videos con timeline visual: corta, une, reordena clips, recorta formato, ajusta velocidad, volumen, rotacion, flip, captura frames y exporta WebM.",
+    keywords: ["editor de video", "cortar video", "unir videos", "video timeline", "recortar video", "convertir video a gif", "capturar frame video"]
   }
 ];
 

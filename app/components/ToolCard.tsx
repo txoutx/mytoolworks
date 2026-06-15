@@ -13,6 +13,7 @@ import {
   Droplets,
   FileText,
   FileImage,
+  Film,
   FileSpreadsheet,
   FileType,
   FormInput,
@@ -48,7 +49,8 @@ import { ui } from "../../lib/i18n";
 const iconMap: Partial<Record<ToolKind, ComponentType<{ size?: number; className?: string }>>> = {
   pdf: FileText,
   converter: ArrowLeftRight,
-  audio: Music2
+  audio: Music2,
+  video: Film
 };
 
 const toolIconMap: Record<string, ComponentType<{ size?: number; className?: string }>> = {
@@ -91,7 +93,8 @@ const toolIconMap: Record<string, ComponentType<{ size?: number; className?: str
   volumen: Box,
   energia: ZapIcon,
   "editor-audio": Music2,
-  "mejorar-convertir-audio": SlidersHorizontal
+  "mejorar-convertir-audio": SlidersHorizontal,
+  "editor-video": Film
 };
 
 const pdfAccentByGroup: Record<string, string> = {
@@ -152,6 +155,7 @@ function getAccent(tool: Tool) {
   if (tool.categorySlug === "img") return "blue";
   if (tool.categorySlug === "conversor") return "green";
   if (tool.categorySlug === "audio") return "purple";
+  if (tool.categorySlug === "video") return "blue";
   return "yellow";
 }
 

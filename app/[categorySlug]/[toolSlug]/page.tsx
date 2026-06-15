@@ -193,6 +193,35 @@ function getToolSeoContent(tool: Tool, locale: Locale = "es") {
       ]
     };
   }
+  if (tool.kind === "video") {
+    return {
+      heading: `${tool.title} gratis y online`,
+      intro: `${tool.description} Puedes trabajar con archivos locales desde el navegador, montar clips en un timeline visual y previsualizar el resultado antes de descargarlo.`,
+      steps: ["Sube uno o varios videos MP4, MOV o WebM.", "Arrastra clips al timeline y reordenalos visualmente.", "Selecciona un clip para cortar inicio y final, cambiar velocidad, volumen, crop, rotacion o flip.", "Exporta solo la seleccion o el timeline completo y revisa la preescucha antes de descargar."],
+      faqs: [
+        {
+          question: `Puedo usar ${tool.title} gratis?`,
+          answer: "Si, el editor funciona gratis en el navegador."
+        },
+        {
+          question: "Se suben mis videos a un servidor?",
+          answer: "No. La edicion disponible se procesa localmente en tu navegador siempre que el formato sea compatible."
+        },
+        {
+          question: "Puede exportar MP4?",
+          answer: "La exportacion estable en navegador es WebM. Para MP4 real con audio mezclado y codificacion avanzada haria falta conectar un backend con ffmpeg."
+        },
+        {
+          question: "Puedo unir varios videos?",
+          answer: "Si, sube varios videos, envialos al timeline, reordenalos y exporta el timeline completo."
+        },
+        {
+          question: "Puedo capturar una imagen del video?",
+          answer: "Si, usa Capturar frame desde la vista previa para descargar un PNG del fotograma actual."
+        }
+      ]
+    };
+  }
   if (tool.kind === "converter") {
     if (tool.slug === "hora-mundial") {
       return {
@@ -360,6 +389,35 @@ function getEnglishToolSeoContent(tool: Tool) {
         {
           question: "Does it work on mobile?",
           answer: "Yes, although long files use a lot of memory and work better on desktop."
+        }
+      ]
+    };
+  }
+  if (tool.kind === "video") {
+    return {
+      heading: `${tool.title} free online`,
+      intro: `${tool.description} Work with local files in the browser, build a visual timeline and preview the rendered result before downloading.`,
+      steps: ["Upload one or more MP4, MOV or WebM videos.", "Drag clips to the timeline and reorder them visually.", "Select a clip to trim start/end, change speed, volume, crop, rotation or flip.", "Export the selected range or the full timeline and preview it before downloading."],
+      faqs: [
+        {
+          question: `Can I use ${tool.title} for free?`,
+          answer: "Yes, the editor works for free in the browser."
+        },
+        {
+          question: "Are my videos uploaded to a server?",
+          answer: "No. Available editing runs locally in your browser when the format is compatible."
+        },
+        {
+          question: "Can it export MP4?",
+          answer: "Stable browser export is WebM. Real MP4 output with mixed audio and advanced encoding requires a backend with ffmpeg."
+        },
+        {
+          question: "Can I merge multiple videos?",
+          answer: "Yes, upload several videos, send them to the timeline, reorder them and export the full timeline."
+        },
+        {
+          question: "Can I capture a video frame?",
+          answer: "Yes, use Capture frame from the preview to download a PNG of the current frame."
         }
       ]
     };
