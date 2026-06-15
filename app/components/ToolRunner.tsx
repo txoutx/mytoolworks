@@ -108,11 +108,14 @@ const videoText = {
     addFiles: "Anadir videos",
     selectFiles: "Seleccionar videos",
     supported: "MP4, MOV y WebM. La exportacion en navegador usa WebM; MP4 real requiere backend con ffmpeg.",
+    input: "Input",
     library: "Biblioteca",
     timeline: "Timeline",
+    output: "Output",
     preview: "Preview",
     selectedClip: "Clip seleccionado",
     sendTimeline: "Enviar al timeline",
+    trimAdd: "Recortar y anadir",
     clearTimeline: "Limpiar timeline",
     noClips: "Arrastra videos aqui o envialos desde la biblioteca.",
     start: "Inicio",
@@ -129,6 +132,9 @@ const videoText = {
     addAudio: "Audio externo",
     audioNote: "El audio externo queda como referencia de sincronizacion en esta version. La mezcla final necesita backend.",
     playClip: "Reproducir clip",
+    playTimeline: "Reproducir timeline",
+    cutPoint: "Punto de corte",
+    splitClip: "Cortar clip",
     exportSelection: "Exportar seleccion",
     exportTimeline: "Exportar timeline",
     captureFrame: "Capturar frame",
@@ -145,11 +151,14 @@ const videoText = {
     addFiles: "Add videos",
     selectFiles: "Select videos",
     supported: "MP4, MOV and WebM. Browser export uses WebM; real MP4 requires a backend with ffmpeg.",
+    input: "Input",
     library: "Library",
     timeline: "Timeline",
+    output: "Output",
     preview: "Preview",
     selectedClip: "Selected clip",
     sendTimeline: "Send to timeline",
+    trimAdd: "Trim and add",
     clearTimeline: "Clear timeline",
     noClips: "Drag videos here or send them from the library.",
     start: "Start",
@@ -166,6 +175,9 @@ const videoText = {
     addAudio: "External audio",
     audioNote: "External audio is a sync reference in this version. Final mixing needs a backend.",
     playClip: "Play clip",
+    playTimeline: "Play timeline",
+    cutPoint: "Cut point",
+    splitClip: "Split clip",
     exportSelection: "Export selection",
     exportTimeline: "Export timeline",
     captureFrame: "Capture frame",
@@ -186,6 +198,7 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
   const audioInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const stopTimerRef = useRef<number | null>(null);
+  const playbackTokenRef = useRef(0);
   const [files, setFiles] = useState<File[]>([]);
   const [urls, setUrls] = useState<string[]>([]);
   const [durations, setDurations] = useState<number[]>([]);
@@ -194,6 +207,7 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [draggedFileIndex, setDraggedFileIndex] = useState<number | null>(null);
   const [draggedClipId, setDraggedClipId] = useState<string | null>(null);
+  const [timelineCutPct, setTimelineCutPct] = useState(50);
   const [startPct, setStartPct] = useState(0);
   const [endPct, setEndPct] = useState(100);
   const [speed, setSpeed] = useState(1);
@@ -253,6 +267,20 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
     selectClip(nextClip);
   }
 
+  function addSelectionToTimeline() {
+    const file = files[activeIndex];
+    if (!file || !activeDuration) return;
+    const nextClip = {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      fileIndex: activeIndex,
+      start: startSeconds,
+      end: endSeconds,
+      label: file.name
+    };
+    setClips((current) => [...current, nextClip]);
+    selectClip(nextClip);
+  }
+
   function selectClip(clip: VideoClip) {
     setSelectedClipId(clip.id);
     setActiveIndex(clip.fileIndex);
@@ -281,6 +309,7 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
   function playClip() {
     const element = videoRef.current;
     if (!element || !activeDuration) return;
+    playbackTokenRef.current += 1;
     if (stopTimerRef.current) window.clearInterval(stopTimerRef.current);
     element.pause();
     element.currentTime = startSeconds;
@@ -294,6 +323,35 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
         if (stopTimerRef.current) window.clearInterval(stopTimerRef.current);
       }
     }, 80);
+  }
+
+  async function playTimeline() {
+    const element = videoRef.current;
+    if (!element || !clips.length) return;
+    const token = playbackTokenRef.current + 1;
+    playbackTokenRef.current = token;
+    if (stopTimerRef.current) window.clearInterval(stopTimerRef.current);
+
+    for (const clip of clips) {
+      if (playbackTokenRef.current !== token) return;
+      setSelectedClipId(clip.id);
+      setActiveIndex(clip.fileIndex);
+      const duration = durations[clip.fileIndex] ?? 1;
+      setStartPct(Math.max(0, Math.min(99, (clip.start / duration) * 100)));
+      setEndPct(Math.max(1, Math.min(100, (clip.end / duration) * 100)));
+      if (element.src !== urls[clip.fileIndex]) {
+        element.src = urls[clip.fileIndex];
+        element.load();
+        await waitForVideoMetadata(element);
+      }
+      element.pause();
+      element.currentTime = clip.start;
+      element.playbackRate = speed;
+      element.volume = volume;
+      element.muted = muted;
+      await element.play();
+      await waitForVideoSegment(element, clip.end, token, playbackTokenRef);
+    }
   }
 
   function moveClip(id: string, direction: -1 | 1) {
@@ -325,6 +383,25 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
   function removeClip(id: string) {
     setClips((current) => current.filter((clip) => clip.id !== id));
     if (selectedClipId === id) setSelectedClipId(null);
+  }
+
+  function splitSelectedClip() {
+    if (!selectedClipId) return;
+    let nextSelection: VideoClip | null = null;
+    setClips((current) => {
+      const index = current.findIndex((clip) => clip.id === selectedClipId);
+      const clip = current[index];
+      if (!clip) return current;
+      const cutAt = clip.start + ((clip.end - clip.start) * timelineCutPct) / 100;
+      if (cutAt <= clip.start + 0.05 || cutAt >= clip.end - 0.05) return current;
+      const first = { ...clip, id: `${clip.id}-a-${Date.now()}`, end: cutAt };
+      const second = { ...clip, id: `${clip.id}-b-${Date.now()}`, start: cutAt };
+      const next = [...current];
+      next.splice(index, 1, first, second);
+      nextSelection = second;
+      return next;
+    });
+    if (nextSelection) selectClip(nextSelection);
   }
 
   async function captureFrame() {
@@ -377,7 +454,7 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
       {!!files.length && (
         <div className="video-editor-grid">
           <section className="video-panel">
-            <h2>{t.library}</h2>
+            <h2>{t.input}</h2>
             <div className="video-library">
               {files.map((file, index) => (
                 <div className={`video-library-item ${index === activeIndex ? "active" : ""}`} draggable onDragStart={() => setDraggedFileIndex(index)} key={`${file.name}-${index}`}>
@@ -405,7 +482,12 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
           <section className="video-panel video-panel-wide">
             <div className="audio-timeline-header">
               <h2>{t.timeline}</h2>
-              {!!clips.length && <button type="button" className="small-action" onClick={() => setClips([])}>{t.clearTimeline}</button>}
+              {!!clips.length && (
+                <div className="video-timeline-actions">
+                  <button type="button" className="small-action" onClick={playTimeline}>{t.playTimeline}</button>
+                  <button type="button" className="small-action" onClick={() => setClips([])}>{t.clearTimeline}</button>
+                </div>
+              )}
             </div>
             <div className={`video-timeline ${clips.length ? "" : "empty"}`} onDragOver={(event) => event.preventDefault()} onDrop={dropFileOnTimeline}>
               {clips.length ? clips.map((clip, index) => (
@@ -420,6 +502,15 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
                 >
                   <strong>{index + 1}. {clip.label}</strong>
                   <span>{formatDuration(clip.start)} - {formatDuration(clip.end)}</span>
+                  {clip.id === selectedClipId && (
+                    <div className="video-clip-cut" onClick={(event) => event.stopPropagation()}>
+                      <label>
+                        <span>{t.cutPoint}: {formatDuration(clip.start + ((clip.end - clip.start) * timelineCutPct) / 100)}</span>
+                        <input type="range" min="1" max="99" value={timelineCutPct} onChange={(event) => setTimelineCutPct(Number(event.target.value))} />
+                      </label>
+                      <button type="button" className="small-action" onClick={splitSelectedClip}>{t.splitClip}</button>
+                    </div>
+                  )}
                   <div className="audio-clip-actions">
                     <button type="button" aria-label={t.moveLeft} onClick={(event) => { event.stopPropagation(); moveClip(clip.id, -1); }}>{"<"}</button>
                     <button type="button" aria-label={t.moveRight} onClick={(event) => { event.stopPropagation(); moveClip(clip.id, 1); }}>{">"}</button>
@@ -434,6 +525,7 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
             <h2>{selectedClipId ? t.selectedClip : t.preview}</h2>
             <label className="audio-range-label"><span>{t.start}: {formatDuration(startSeconds)}</span><input type="range" min="0" max="99" value={startPct} onChange={(event) => updateSelection(Number(event.target.value), endPct)} /></label>
             <label className="audio-range-label"><span>{t.end}: {formatDuration(endSeconds)}</span><input type="range" min="1" max="100" value={endPct} onChange={(event) => updateSelection(startPct, Number(event.target.value))} /></label>
+            <button type="button" className="button secondary" onClick={addSelectionToTimeline}>{t.trimAdd}</button>
             <label className="audio-range-label"><span>{t.speed}: {speed.toFixed(2)}x</span><input type="range" min="0.5" max="2" step="0.05" value={speed} onChange={(event) => setSpeed(Number(event.target.value))} /></label>
             <label className="audio-range-label"><span>{t.volume}: {Math.round(volume * 100)}%</span><input type="range" min="0" max="1" step="0.05" value={volume} onChange={(event) => setVolume(Number(event.target.value))} /></label>
             <label className="audio-check"><input type="checkbox" checked={muted} onChange={(event) => setMuted(event.target.checked)} /> {t.mute}</label>
@@ -455,6 +547,7 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
           </section>
 
           <section className="video-panel video-panel-wide">
+            <h2>{t.output}</h2>
             <div className="video-export-actions">
               <button type="button" className="button" onClick={() => exportVideo("selection")}>{t.exportSelection}</button>
               <button type="button" className="button secondary" onClick={() => exportVideo("timeline")}>{t.exportTimeline}</button>
@@ -557,6 +650,28 @@ function seekVideo(video: HTMLVideoElement, seconds: number) {
   return new Promise<void>((resolve) => {
     video.onseeked = () => resolve();
     video.currentTime = seconds;
+  });
+}
+
+function waitForVideoMetadata(video: HTMLVideoElement) {
+  if (video.readyState >= 1) return Promise.resolve();
+  return new Promise<void>((resolve, reject) => {
+    video.onloadedmetadata = () => resolve();
+    video.onerror = () => reject(new Error("Video metadata failed"));
+  });
+}
+
+function waitForVideoSegment(video: HTMLVideoElement, endSeconds: number, token: number, tokenRef: { current: number }) {
+  return new Promise<void>((resolve) => {
+    function tick() {
+      if (tokenRef.current !== token || video.currentTime >= endSeconds || video.ended) {
+        video.pause();
+        resolve();
+        return;
+      }
+      requestAnimationFrame(tick);
+    }
+    tick();
   });
 }
 
