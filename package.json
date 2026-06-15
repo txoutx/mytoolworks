@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@vvo/tzdb": "^6.198.0",
     "docx": "^9.7.1",
     "jszip": "^3.10.1",
     "lucide-react": "^0.468.0",

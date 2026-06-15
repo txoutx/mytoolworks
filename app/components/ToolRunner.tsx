@@ -118,6 +118,11 @@ const youtubeText = {
     minutes: "Minutos",
     seconds: "Segundos",
     estimates: "Tamanos estimados",
+    trim: "Preedicion",
+    trimStart: "Inicio",
+    trimEnd: "Final",
+    selectedDuration: "Duracion seleccionada",
+    selectedPreview: "La vista previa se actualiza con el tramo seleccionado.",
     thumbnails: "Miniaturas disponibles",
     open: "Abrir",
     download: "Descargar",
@@ -145,6 +150,11 @@ const youtubeText = {
     minutes: "Minutes",
     seconds: "Seconds",
     estimates: "Estimated sizes",
+    trim: "Pre-edit",
+    trimStart: "Start",
+    trimEnd: "End",
+    selectedDuration: "Selected duration",
+    selectedPreview: "The preview updates with the selected segment.",
     thumbnails: "Available thumbnails",
     open: "Open",
     download: "Download",
@@ -182,11 +192,19 @@ function YouTubeTool({ tool, locale }: { tool: Tool; locale: Locale }) {
   const [url, setUrl] = useState("");
   const [minutes, setMinutes] = useState(3);
   const [seconds, setSeconds] = useState(0);
+  const [trimStart, setTrimStart] = useState(0);
+  const [trimEnd, setTrimEnd] = useState(180);
   const [oembed, setOembed] = useState<OEmbedInfo | null>(null);
   const info = useMemo(() => parseYouTubeUrl(url), [url]);
-  const durationMinutes = Math.max(0, minutes) + Math.max(0, Math.min(59, seconds)) / 60;
+  const totalDurationSeconds = Math.max(1, Math.round(Math.max(0, minutes) * 60 + Math.max(0, Math.min(59, seconds))));
+  const selectedStart = Math.min(trimStart, totalDurationSeconds - 1);
+  const selectedEnd = Math.max(selectedStart + 1, Math.min(trimEnd, totalDurationSeconds));
+  const selectedDurationSeconds = selectedEnd - selectedStart;
+  const durationMinutes = selectedDurationSeconds / 60;
   const isVideoTool = tool.output === "video";
   const isAudioTool = tool.output === "audio";
+  const supportsTrim = isAudioTool || isVideoTool || tool.slug.includes("shorts");
+  const previewUrl = info ? `${info.embedUrl}?start=${selectedStart}&end=${selectedEnd}` : "";
   const estimateRows = isAudioTool
     ? mp3Qualities.map((quality) => ({
         label: quality.label,
@@ -218,6 +236,12 @@ function YouTubeTool({ tool, locale }: { tool: Tool; locale: Locale }) {
     };
   }, [info]);
 
+  useEffect(() => {
+    const total = Math.max(1, Math.round(Math.max(0, minutes) * 60 + Math.max(0, Math.min(59, seconds))));
+    setTrimStart((current) => Math.min(current, total - 1));
+    setTrimEnd((current) => Math.min(Math.max(current, 1), total));
+  }, [minutes, seconds]);
+
   return (
     <div className="tool-workspace youtube-workspace">
       <div className="form-grid">
@@ -243,7 +267,8 @@ function YouTubeTool({ tool, locale }: { tool: Tool; locale: Locale }) {
             <div className="youtube-embed">
               <iframe
                 title="YouTube preview"
-                src={info.embedUrl}
+                src={supportsTrim ? previewUrl : info.embedUrl}
+                key={supportsTrim ? previewUrl : info.embedUrl}
                 loading="lazy"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
@@ -277,6 +302,39 @@ function YouTubeTool({ tool, locale }: { tool: Tool; locale: Locale }) {
             </div>
             <p className="option-note">{t.durationHelp}</p>
           </section>
+
+          {(isAudioTool || isVideoTool) && (
+            <section className="youtube-panel">
+              <h2>{t.trim}</h2>
+              <div className="youtube-trim-controls">
+                <label>
+                  <span>{t.trimStart}: {formatDuration(selectedStart)}</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max={Math.max(1, totalDurationSeconds - 1)}
+                    value={selectedStart}
+                    onChange={(event) => setTrimStart(Math.min(Number(event.target.value), selectedEnd - 1))}
+                  />
+                </label>
+                <label>
+                  <span>{t.trimEnd}: {formatDuration(selectedEnd)}</span>
+                  <input
+                    type="range"
+                    min="1"
+                    max={totalDurationSeconds}
+                    value={selectedEnd}
+                    onChange={(event) => setTrimEnd(Math.max(Number(event.target.value), selectedStart + 1))}
+                  />
+                </label>
+              </div>
+              <div className="youtube-selection-summary">
+                <strong>{t.selectedDuration}</strong>
+                <span>{formatDuration(selectedDurationSeconds)}</span>
+              </div>
+              <p className="option-note">{t.selectedPreview}</p>
+            </section>
+          )}
 
           {(isAudioTool || isVideoTool) && (
             <section className="youtube-panel">
@@ -376,6 +434,15 @@ function formatMegabytes(value: number) {
   if (!Number.isFinite(value) || value <= 0) return "0 MB";
   if (value >= 1024) return `${(value / 1024).toFixed(2)} GB`;
   return `${value.toFixed(value >= 10 ? 1 : 2)} MB`;
+}
+
+function formatDuration(totalSeconds: number) {
+  const safeSeconds = Math.max(0, Math.round(totalSeconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+  if (hours > 0) return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function PdfUploader({ tool, locale }: { tool: Tool; locale: Locale }) {

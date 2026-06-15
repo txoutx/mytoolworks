@@ -1553,6 +1553,46 @@ h1 {
   gap: 10px;
 }
 
+.youtube-trim-controls {
+  display: grid;
+  gap: 12px;
+}
+
+.youtube-trim-controls label {
+  display: grid;
+  gap: 7px;
+  color: #354650;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.youtube-trim-controls input[type="range"] {
+  width: 100%;
+  accent-color: var(--brand);
+}
+
+.youtube-selection-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #dfe6eb;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px 12px;
+}
+
+.youtube-selection-summary strong {
+  color: #52616b;
+  font-size: 13px;
+}
+
+.youtube-selection-summary span {
+  color: #172b33;
+  font-size: 18px;
+  font-weight: 900;
+}
+
 .youtube-duration label {
   display: grid;
   gap: 6px;
