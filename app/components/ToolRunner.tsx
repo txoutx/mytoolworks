@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { MouseEvent } from "react";
 import { rawTimeZones } from "@vvo/tzdb";
 import { FileText, UploadCloud, X } from "lucide-react";
 import type { Tool } from "../data/tools";
@@ -44,6 +45,8 @@ type VideoClip = {
   end: number;
   label: string;
 };
+
+type VideoExportFormat = "webm-vp9" | "webm-vp8" | "mp4";
 
 const formatEuro = new Intl.NumberFormat("es-ES", {
   style: "currency",
@@ -114,28 +117,32 @@ const videoText = {
     output: "Output",
     preview: "Preview",
     selectedClip: "Clip seleccionado",
-    previewTrim: "Recorte en preview",
+    previewTrim: "Input / Output",
     sendTimeline: "Enviar al timeline",
     trimAdd: "Recortar y anadir",
     clearTimeline: "Limpiar timeline",
     noClips: "Arrastra videos aqui o envialos desde la biblioteca.",
-    start: "Inicio",
-    end: "Final",
+    start: "Input",
+    end: "Output",
     speed: "Velocidad",
     volume: "Volumen",
     mute: "Mute",
     crop: "Crop",
     quality: "Calidad",
+    exportFormat: "Formato",
+    includeAudio: "Incluir audio original",
     compress: "Compresion automatica",
     rotate: "Rotar",
     flipH: "Flip H",
     flipV: "Flip V",
     addAudio: "Audio externo",
-    audioNote: "El audio externo queda como referencia de sincronizacion en esta version. La mezcla final necesita backend.",
+    audioNote: "El audio original de los clips se intenta conservar en la exportacion. El audio externo queda como referencia; mezclarlo requiere backend.",
     playClip: "Reproducir clip",
     playTimeline: "Reproducir timeline",
     cutPoint: "Punto de corte",
-    splitClip: "Cortar y separar",
+    splitClip: "Dividir",
+    splitSelected: "Dividir clip seleccionado",
+    timelineHint: "Click en un clip para poner el corte. Ajusta Input/Output del clip seleccionado y divide desde el cabezal.",
     exportSelection: "Exportar seleccion",
     exportTimeline: "Exportar timeline",
     captureFrame: "Capturar frame",
@@ -158,7 +165,7 @@ const videoText = {
     output: "Output",
     preview: "Preview",
     selectedClip: "Selected clip",
-    previewTrim: "Preview trim",
+    previewTrim: "Input / Output",
     sendTimeline: "Send to timeline",
     trimAdd: "Trim and add",
     clearTimeline: "Clear timeline",
@@ -170,16 +177,20 @@ const videoText = {
     mute: "Mute",
     crop: "Crop",
     quality: "Quality",
+    exportFormat: "Format",
+    includeAudio: "Include original audio",
     compress: "Auto compression",
     rotate: "Rotate",
     flipH: "Flip H",
     flipV: "Flip V",
     addAudio: "External audio",
-    audioNote: "External audio is a sync reference in this version. Final mixing needs a backend.",
+    audioNote: "Original clip audio is preserved when the browser can decode it. External audio is a reference; mixing it needs a backend.",
     playClip: "Play clip",
     playTimeline: "Play timeline",
     cutPoint: "Cut point",
-    splitClip: "Cut and split",
+    splitClip: "Split",
+    splitSelected: "Split selected clip",
+    timelineHint: "Click a clip to place the cut. Adjust Input/Output on the selected clip and split from the playhead.",
     exportSelection: "Export selection",
     exportTimeline: "Export timeline",
     captureFrame: "Capture frame",
@@ -219,6 +230,8 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
   const [muted, setMuted] = useState(false);
   const [crop, setCrop] = useState("16:9");
   const [quality, setQuality] = useState(720);
+  const [exportFormat, setExportFormat] = useState<VideoExportFormat>("webm-vp9");
+  const [includeAudio, setIncludeAudio] = useState(true);
   const [compress, setCompress] = useState(true);
   const [rotation, setRotation] = useState(0);
   const [flipH, setFlipH] = useState(false);
@@ -228,9 +241,11 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
   const [resultName, setResultName] = useState("video.webm");
   const [status, setStatus] = useState<"idle" | "processing" | "done" | "error">("idle");
   const [message, setMessage] = useState("");
+  const selectedClip = clips.find((clip) => clip.id === selectedClipId);
   const activeDuration = durations[activeIndex] ?? 0;
   const startSeconds = activeDuration ? (startPct / 100) * activeDuration : 0;
   const endSeconds = activeDuration ? Math.max(startSeconds + 0.05, (endPct / 100) * activeDuration) : 0;
+  const selectedCutSeconds = selectedClip ? selectedClip.start + ((selectedClip.end - selectedClip.start) * timelineCutPct) / 100 : 0;
 
   useEffect(() => {
     return () => {
@@ -291,6 +306,14 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
     const duration = durations[clip.fileIndex] ?? 1;
     setStartPct(Math.max(0, Math.min(99, (clip.start / duration) * 100)));
     setEndPct(Math.max(1, Math.min(100, (clip.end / duration) * 100)));
+    const element = videoRef.current;
+    if (element) {
+      if (element.src !== urls[clip.fileIndex]) {
+        element.src = urls[clip.fileIndex];
+        element.load();
+      }
+      element.currentTime = clip.start;
+    }
   }
 
   function updateSelection(nextStartPct = startPct, nextEndPct = endPct) {
@@ -395,6 +418,17 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
     if (selectedClipId === id) setSelectedClipId(null);
   }
 
+  function setTimelineCutFromClick(event: MouseEvent<HTMLElement>, clip: VideoClip) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const pct = Math.max(1, Math.min(99, ((event.clientX - rect.left) / rect.width) * 100));
+    setTimelineCutPct(pct);
+    selectClip(clip);
+    const element = videoRef.current;
+    if (element) {
+      element.currentTime = clip.start + ((clip.end - clip.start) * pct) / 100;
+    }
+  }
+
   function splitSelectedClip() {
     if (!selectedClipId) return;
     let nextSelection: VideoClip | null = null;
@@ -439,9 +473,9 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
         target === "timeline" && clips.length
           ? clips
           : [{ id: "selection", fileIndex: activeIndex, start: startSeconds, end: endSeconds, label: files[activeIndex]?.name ?? "video" }];
-      const blob = await renderVideoClips(renderClips, urls, crop, quality, rotation, flipH, flipV, speed, compress);
-      const url = URL.createObjectURL(blob);
-      setResultName(`${target === "timeline" ? "timeline" : "seleccion"}.webm`);
+      const rendered = await renderVideoClips(renderClips, files, urls, crop, quality, rotation, flipH, flipV, speed, compress, exportFormat, includeAudio);
+      const url = URL.createObjectURL(rendered.blob);
+      setResultName(`${target === "timeline" ? "timeline" : "seleccion"}.${getVideoExtension(rendered.mimeType)}`);
       setResultUrl(url);
       setStatus("done");
       setMessage(t.done);
@@ -510,7 +544,7 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
                 <article
                   className={`video-clip ${clip.id === selectedClipId ? "active" : ""} ${clip.id === playingClipId ? "playing" : ""}`}
                   draggable
-                  onClick={() => selectClip(clip)}
+                  onClick={(event) => setTimelineCutFromClick(event, clip)}
                   onDragStart={() => setDraggedClipId(clip.id)}
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={(event) => { event.stopPropagation(); dropClip(clip.id); }}
@@ -518,16 +552,8 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
                 >
                   <strong>{index + 1}. {clip.label}</strong>
                   <span>{formatDuration(clip.start)} - {formatDuration(clip.end)}</span>
+                  {clip.id === selectedClipId && <span className="video-clip-cut-marker" style={{ left: `${timelineCutPct}%` }} />}
                   {clip.id === playingClipId && <span className="video-clip-progress" style={{ width: `${timelineProgressPct}%` }} />}
-                  {clip.id === selectedClipId && (
-                    <div className="video-clip-cut" onClick={(event) => event.stopPropagation()}>
-                      <label>
-                        <span>{t.cutPoint}: {formatDuration(clip.start + ((clip.end - clip.start) * timelineCutPct) / 100)}</span>
-                        <input type="range" min="1" max="99" value={timelineCutPct} onChange={(event) => setTimelineCutPct(Number(event.target.value))} />
-                      </label>
-                      <button type="button" className="small-action" onClick={splitSelectedClip}>{t.splitClip}</button>
-                    </div>
-                  )}
                   <div className="audio-clip-actions">
                     <button type="button" aria-label={t.moveLeft} onClick={(event) => { event.stopPropagation(); moveClip(clip.id, -1); }}>{"<"}</button>
                     <button type="button" aria-label={t.moveRight} onClick={(event) => { event.stopPropagation(); moveClip(clip.id, 1); }}>{">"}</button>
@@ -540,7 +566,14 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
 
           <section className="video-panel">
             <h2>{selectedClipId ? t.selectedClip : t.timeline}</h2>
-            <p className="option-note">{locale === "en" ? "Select a timeline clip, choose the cut point inside it and split it into separate clips. Preview trim lives in the video preview." : "Selecciona un clip del timeline, elige el punto de corte dentro del clip y separalo en clips independientes. El inicio y final se ajustan en la preview."}</p>
+            <p className="option-note">{t.timelineHint}</p>
+            {selectedClip && (
+              <div className="video-inspector">
+                <strong>{selectedClip.label}</strong>
+                <span>{t.cutPoint}: {formatDuration(selectedCutSeconds)}</span>
+                <button type="button" className="button secondary" onClick={splitSelectedClip}>{t.splitSelected}</button>
+              </div>
+            )}
             <label className="audio-range-label"><span>{t.speed}: {speed.toFixed(2)}x</span><input type="range" min="0.5" max="2" step="0.05" value={speed} onChange={(event) => setSpeed(Number(event.target.value))} /></label>
             <label className="audio-range-label"><span>{t.volume}: {Math.round(volume * 100)}%</span><input type="range" min="0" max="1" step="0.05" value={volume} onChange={(event) => setVolume(Number(event.target.value))} /></label>
             <label className="audio-check"><input type="checkbox" checked={muted} onChange={(event) => setMuted(event.target.checked)} /> {t.mute}</label>
@@ -550,11 +583,13 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
             <h2>{locale === "en" ? "Transform" : "Transformar"}</h2>
             <label className="field"><span>{t.crop}</span><select value={crop} onChange={(event) => setCrop(event.target.value)}><option>16:9</option><option>9:16</option><option>1:1</option><option>original</option></select></label>
             <label className="field"><span>{t.quality}</span><select value={quality} onChange={(event) => setQuality(Number(event.target.value))}><option value={360}>360p</option><option value={480}>480p</option><option value={720}>720p</option><option value={1080}>1080p</option></select></label>
+            <label className="field"><span>{t.exportFormat}</span><select value={exportFormat} onChange={(event) => setExportFormat(event.target.value as VideoExportFormat)}><option value="webm-vp9">WebM VP9</option><option value="webm-vp8">WebM VP8</option><option value="mp4">MP4 H.264 si el navegador lo soporta</option></select></label>
             <div className="segmented-wrap">
               <button type="button" className="small-action" onClick={() => setRotation((current) => (current + 90) % 360)}>{t.rotate}</button>
               <button type="button" className={`small-action ${flipH ? "active" : ""}`} onClick={() => setFlipH((current) => !current)}>{t.flipH}</button>
               <button type="button" className={`small-action ${flipV ? "active" : ""}`} onClick={() => setFlipV((current) => !current)}>{t.flipV}</button>
             </div>
+            <label className="audio-check"><input type="checkbox" checked={includeAudio} onChange={(event) => setIncludeAudio(event.target.checked)} /> {t.includeAudio}</label>
             <label className="audio-check"><input type="checkbox" checked={compress} onChange={(event) => setCompress(event.target.checked)} /> {t.compress}</label>
             <button type="button" className="small-action" onClick={() => audioInputRef.current?.click()}>{t.addAudio}</button>
             {externalAudioName && <p className="option-note">{externalAudioName}</p>}
@@ -594,6 +629,7 @@ function readVideoDuration(url: string) {
 
 async function renderVideoClips(
   clips: VideoClip[],
+  files: File[],
   urls: string[],
   crop: string,
   quality: number,
@@ -601,7 +637,9 @@ async function renderVideoClips(
   flipH: boolean,
   flipV: boolean,
   speed: number,
-  compress: boolean
+  compress: boolean,
+  exportFormat: VideoExportFormat,
+  includeAudio: boolean
 ) {
   const firstUrl = urls[clips[0]?.fileIndex ?? 0];
   const probe = await loadVideoElement(firstUrl);
@@ -613,7 +651,18 @@ async function renderVideoClips(
   if (!context) throw new Error("Canvas not available");
 
   const stream = canvas.captureStream(compress ? 24 : 30);
-  const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : "video/webm";
+  const audioContext =
+    includeAudio && typeof AudioContext !== "undefined"
+      ? new AudioContext()
+      : null;
+  const audioDestination = audioContext ? audioContext.createMediaStreamDestination() : null;
+  const decodedAudio = new Map<number, AudioBuffer>();
+  if (audioContext && audioDestination) {
+    await audioContext.resume();
+    audioDestination.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
+  }
+
+  const mimeType = getVideoMimeType(exportFormat);
   const chunks: BlobPart[] = [];
   const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: compress ? 1_800_000 : 4_500_000 });
   recorder.ondataavailable = (event) => {
@@ -626,6 +675,9 @@ async function renderVideoClips(
     video.muted = true;
     video.playbackRate = speed;
     await seekVideo(video, clip.start);
+    const source = audioContext && audioDestination
+      ? await createClipAudioSource(audioContext, audioDestination, decodedAudio, files[clip.fileIndex], clip, speed)
+      : null;
     await video.play();
     await new Promise<void>((resolve) => {
       function draw() {
@@ -639,6 +691,11 @@ async function renderVideoClips(
       }
       draw();
     });
+    try {
+      source?.stop();
+    } catch {
+      // The source may have already ended naturally.
+    }
   }
 
   const stopped = new Promise<void>((resolve) => {
@@ -646,7 +703,49 @@ async function renderVideoClips(
   });
   recorder.stop();
   await stopped;
-  return new Blob(chunks, { type: "video/webm" });
+  audioContext?.close();
+  return { blob: new Blob(chunks, { type: mimeType }), mimeType };
+}
+
+async function createClipAudioSource(
+  audioContext: AudioContext,
+  destination: MediaStreamAudioDestinationNode,
+  decodedAudio: Map<number, AudioBuffer>,
+  file: File | undefined,
+  clip: VideoClip,
+  speed: number
+) {
+  if (!file) return null;
+  try {
+    let buffer = decodedAudio.get(clip.fileIndex);
+    if (!buffer) {
+      const data = await file.arrayBuffer();
+      buffer = await audioContext.decodeAudioData(data.slice(0));
+      decodedAudio.set(clip.fileIndex, buffer);
+    }
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.playbackRate.value = speed;
+    source.connect(destination);
+    source.start(audioContext.currentTime + 0.03, clip.start, Math.max(0.05, clip.end - clip.start));
+    return source;
+  } catch {
+    return null;
+  }
+}
+
+function getVideoMimeType(format: VideoExportFormat) {
+  const candidates =
+    format === "mp4"
+      ? ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4"]
+      : format === "webm-vp8"
+        ? ["video/webm;codecs=vp8,opus", "video/webm;codecs=vp8", "video/webm"]
+        : ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp9", "video/webm"];
+  return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? "video/webm";
+}
+
+function getVideoExtension(mimeType: string) {
+  return mimeType.includes("mp4") ? "mp4" : "webm";
 }
 
 function loadVideoElement(url: string) {

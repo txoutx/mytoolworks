@@ -1639,7 +1639,7 @@ h1 {
 }
 
 .video-clip.active {
-  flex-basis: 320px;
+  flex-basis: 260px;
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
 }
@@ -1679,7 +1679,30 @@ h1 {
   transition: width 80ms linear;
 }
 
-.video-clip-cut {
+.video-clip-cut-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: block;
+  width: 2px;
+  background: #ef4444;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.18);
+  pointer-events: none;
+}
+
+.video-clip-cut-marker::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 0 0 3px 3px;
+  background: #ef4444;
+  transform: translateX(-50%);
+}
+
+.video-inspector {
   display: grid;
   gap: 8px;
   border: 1px solid #d6e4fb;
@@ -1688,21 +1711,22 @@ h1 {
   padding: 8px;
 }
 
-.video-clip-cut label {
-  display: grid;
-  gap: 6px;
+.video-inspector strong,
+.video-inspector span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.video-inspector strong {
+  color: #26333b;
+  font-size: 13px;
+}
+
+.video-inspector span {
   color: #334650;
   font-size: 12px;
   font-weight: 850;
-}
-
-.video-clip-cut input {
-  width: 100%;
-  accent-color: var(--blue);
-}
-
-.video-clip-cut .small-action {
-  justify-self: start;
 }
 
 .audio-check {

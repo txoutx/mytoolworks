@@ -34,12 +34,6 @@ export function ThirdPartyScripts() {
 
   return (
     <>
-      <Script
-        id="Cookiebot"
-        src="https://consent.cookiebot.com/uc.js"
-        data-cbid="d4c7dab5-5b5d-4327-98fc-047ac5f022ea"
-        strategy="lazyOnload"
-      />
       <Script src="https://www.googletagmanager.com/gtag/js?id=G-4ZTWW5XPZ1" strategy="lazyOnload" />
       <Script id="google-analytics" strategy="lazyOnload">
         {`window.dataLayer = window.dataLayer || [];
