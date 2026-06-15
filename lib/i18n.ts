@@ -19,7 +19,7 @@ export const ui = {
     navPdf: "PDF",
     navImage: "Imagen",
     navConverter: "Conversores",
-    navYouTube: "YouTube",
+    navAudio: "Audio",
     footerTagline: "Herramientas online rapidas y limpias. Hecho por txoutx.",
     privacy: "Privacidad",
     cookies: "Cookies",
@@ -34,18 +34,18 @@ export const ui = {
     sideAd: "Anuncio lateral",
     related: "Relacionadas",
     homeEyebrow: "Herramientas online",
-    homeLead: "Elige una categoria y trabaja con PDFs, imagenes, conversores o enlaces de YouTube directamente desde el navegador.",
+    homeLead: "Elige una categoria y trabaja con PDFs, imagenes, audio o conversores directamente desde el navegador.",
     homePdfDescription: "Une, divide, comprime, rota, ordena, convierte a imagen y firma archivos PDF.",
     homeImageTitle: "Imagen",
     homeImageDescription: "Edita imagenes, crea collages, cambia el lienzo, convierte formatos y descarga el resultado.",
     homeConverterTitle: "Conversores",
     homeConverterDescription: "Convierte divisas, unidades, horas, zonas horarias, temperatura, peso, datos digitales, area, volumen y energia.",
-    homeYouTubeTitle: "YouTube",
-    homeYouTubeDescription: "Extrae miniaturas, revisa metadatos y prepara estimaciones para audio, video, Shorts y playlists.",
+    homeAudioTitle: "Audio",
+    homeAudioDescription: "Corta, une, convierte, comprime, limpia y mejora audios sin subirlos a un servidor.",
     openPdf: "Abrir PDF",
     openImage: "Abrir imagen",
     openConverter: "Abrir conversores",
-    openYouTube: "Abrir YouTube",
+    openAudio: "Abrir audio",
     imageEyebrow: "Imagen",
     imageTitle: "Herramientas de imagen online",
     imageLead: "Edita, combina, comprime, convierte, redimensiona y descarga imagenes directamente desde el navegador."
@@ -54,7 +54,7 @@ export const ui = {
     navPdf: "PDF",
     navImage: "Images",
     navConverter: "Converters",
-    navYouTube: "YouTube",
+    navAudio: "Audio",
     footerTagline: "Fast, clean online tools. Made by txoutx.",
     privacy: "Privacy",
     cookies: "Cookies",
@@ -69,18 +69,18 @@ export const ui = {
     sideAd: "Side ad",
     related: "Related tools",
     homeEyebrow: "Online tools",
-    homeLead: "Choose a category and work with PDFs, images, converters or YouTube links directly in your browser.",
+    homeLead: "Choose a category and work with PDFs, images, audio or converters directly in your browser.",
     homePdfDescription: "Merge, split, compress, rotate, reorder, convert to images and sign PDF files.",
     homeImageTitle: "Images",
     homeImageDescription: "Edit images, create collages, change the canvas, convert formats and download the result.",
     homeConverterTitle: "Converters",
     homeConverterDescription: "Convert currencies, units, time zones, temperature, weight, digital data, area, volume and energy.",
-    homeYouTubeTitle: "YouTube",
-    homeYouTubeDescription: "Extract thumbnails, review metadata and prepare estimates for audio, video, Shorts and playlists.",
+    homeAudioTitle: "Audio",
+    homeAudioDescription: "Cut, merge, convert, compress, clean and enhance audio without uploading it to a server.",
     openPdf: "Open PDF",
     openImage: "Open images",
     openConverter: "Open converters",
-    openYouTube: "Open YouTube",
+    openAudio: "Open audio",
     imageEyebrow: "Images",
     imageTitle: "Online image tools",
     imageLead: "Edit, combine, compress, convert, resize and download images directly from your browser."
@@ -108,11 +108,11 @@ const categoryTranslations: Record<Locale, Record<string, Partial<ToolCategory>>
       navLabel: "Converters",
       description: "Convert currencies, units, time zones, temperature, weight, digital data, area, volume and energy."
     },
-    youtube: {
-      title: "YouTube Tools",
-      shortTitle: "YouTube",
-      navLabel: "YouTube",
-      description: "Check metadata, thumbnails, download estimates and utilities for YouTube links."
+    audio: {
+      title: "Audio tools",
+      shortTitle: "Audio",
+      navLabel: "Audio",
+      description: "Cut, merge, convert, compress, enhance and adjust audio files from your browser."
     }
   }
 };
@@ -264,53 +264,17 @@ const toolTranslations: Record<Locale, Record<string, Partial<Tool>>> = {
       group: "Science",
       description: "Convert joules, kilojoules, calories, kilocalories, Wh, kWh and BTU."
     },
-    "youtube-a-mp3": {
-      title: "YouTube to MP3",
-      h1: "Convert YouTube to MP3",
-      group: "Converters",
-      description: "Paste a YouTube URL, preview the video and estimate MP3 size by quality before downloading your own or permitted content."
+    "editor-audio": {
+      title: "Audio editor",
+      h1: "Online audio editor",
+      group: "Editing",
+      description: "Cut MP3, WAV and other audio files, merge several files, apply fade in/out, change speed, remove silence and export WAV."
     },
-    "youtube-a-mp4": {
-      title: "YouTube to MP4",
-      h1: "Convert YouTube to MP4",
-      group: "Converters",
-      description: "Paste a YouTube URL, preview the video and compare video qualities from 144p to 4K for authorized content."
-    },
-    "youtube-thumbnail-downloader": {
-      title: "YouTube Thumbnail Downloader",
-      h1: "Download YouTube thumbnail",
-      group: "Thumbnails",
-      description: "Extract the video ID and open YouTube thumbnails in several resolutions such as maxres, sd, hq and mq."
-    },
-    "youtube-metadata-viewer": {
-      title: "YouTube Metadata Viewer",
-      h1: "View YouTube metadata",
-      group: "Analysis",
-      description: "Paste a YouTube link to see the video ID, thumbnails, embed link, clean links and basic data."
-    },
-    "youtube-shorts-downloader": {
-      title: "YouTube Shorts Downloader",
-      h1: "YouTube Shorts Downloader",
-      group: "Shorts",
-      description: "Prepare Shorts links, preview them and keep the download flow ready for your own or authorized content."
-    },
-    "youtube-playlist-downloader": {
-      title: "YouTube Playlist Downloader",
-      h1: "YouTube Playlist Downloader",
-      group: "Playlists",
-      description: "Detect YouTube playlist links and prepare batch downloads when a backend is connected."
-    },
-    "youtube-transcript-extractor": {
-      title: "YouTube Transcript Extractor",
-      h1: "Extract YouTube transcript",
-      group: "Text",
-      description: "Prepared tool for extracting available YouTube video transcripts when a backend is connected."
-    },
-    "youtube-tags-extractor": {
-      title: "YouTube Tags Extractor",
-      h1: "Extract YouTube tags",
-      group: "YouTube SEO",
-      description: "Analyze YouTube links and prepare tag and video SEO extraction with a backend."
+    "mejorar-convertir-audio": {
+      title: "Enhance and convert audio",
+      h1: "Enhance and convert audio online",
+      group: "Enhance and convert",
+      description: "Convert audio to WAV, adjust sample rate, normalize volume, compress dynamics, convert stereo to mono, split channels and reduce basic noise."
     }
   }
 };

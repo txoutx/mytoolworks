@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeftRight, FileImage, FileText, Youtube } from "lucide-react";
+import { ArrowLeftRight, FileImage, FileText, Music2 } from "lucide-react";
 import type { Locale } from "../../lib/i18n";
 import { ui, withLocalePath } from "../../lib/i18n";
 import { AdSlot, Footer, Header } from "./SiteChrome";
@@ -67,18 +67,18 @@ export function HomePageContent({ locale }: { locale: Locale }) {
                 <footer>{t.openConverter}</footer>
               </Link>
 
-              <Link href={withLocalePath("/youtube", locale)} className="home-category-card">
+              <Link href={withLocalePath("/audio", locale)} className="home-category-card">
                 <div className="home-category-icon" aria-hidden="true">
-                  <Youtube size={28} />
+                  <Music2 size={28} />
                 </div>
-                <h2>{t.homeYouTubeTitle}</h2>
-                <p>{t.homeYouTubeDescription}</p>
+                <h2>{t.homeAudioTitle}</h2>
+                <p>{t.homeAudioDescription}</p>
                 <div className="category-preview-list">
-                  <span>MP3/MP4</span>
-                  <span>{locale === "en" ? "Thumbnails" : "Miniaturas"}</span>
-                  <span>{locale === "en" ? "Metadata" : "Metadatos"}</span>
+                  <span>{locale === "en" ? "Cut" : "Cortar"}</span>
+                  <span>{locale === "en" ? "Merge" : "Unir"}</span>
+                  <span>{locale === "en" ? "Enhance" : "Mejorar"}</span>
                 </div>
-                <footer>{t.openYouTube}</footer>
+                <footer>{t.openAudio}</footer>
               </Link>
             </div>
           </div>

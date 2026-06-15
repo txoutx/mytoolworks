@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
 import { rawTimeZones } from "@vvo/tzdb";
-import { BadgeInfo, Download, FileText, HardDrive, ImageDown, Link2, Music, UploadCloud, Video, X } from "lucide-react";
+import { FileText, UploadCloud, X } from "lucide-react";
 import type { Tool } from "../data/tools";
 import type { Locale } from "../../lib/i18n";
 
@@ -78,7 +77,7 @@ export function ToolRunner({ tool, locale = "es" }: RunnerProps) {
   if (tool.kind === "salary") return <SalaryCalculator />;
   if (tool.slug === "hora-mundial") return <WorldClockConverter tool={tool} locale={locale} />;
   if (tool.kind === "converter") return <UnitConverter tool={tool} locale={locale} />;
-  if (tool.kind === "youtube") return <YouTubeTool tool={tool} locale={locale} />;
+  if (tool.kind === "audio") return <AudioTool tool={tool} locale={locale} />;
   if (tool.kind === "scientific") return <ScientificCalculator />;
   if (tool.kind === "cv") return <CvGenerator />;
   if (tool.kind === "letter") return <LetterGenerator />;
@@ -87,362 +86,524 @@ export function ToolRunner({ tool, locale = "es" }: RunnerProps) {
   return <PdfUploader tool={tool} locale={locale} />;
 }
 
-type YouTubeInfo = {
-  videoId: string;
-  playlistId?: string;
-  canonicalUrl: string;
-  embedUrl: string;
-  shortsUrl: string;
-};
-
-type OEmbedInfo = {
-  title?: string;
-  author_name?: string;
-  provider_name?: string;
-};
-
-const youtubeText = {
+const audioText = {
   es: {
-    label: "URL de YouTube",
-    placeholder: "https://www.youtube.com/watch?v=...",
-    pasteHelp: "Admite enlaces de youtube.com, youtu.be, Shorts y playlists.",
-    invalid: "Pega una URL valida de YouTube para ver la informacion.",
-    preview: "Vista previa",
-    details: "Datos detectados",
-    videoId: "ID del video",
-    playlistId: "ID de playlist",
-    cleanUrl: "URL limpia",
-    embedUrl: "URL embed",
-    duration: "Duracion del video",
-    durationHelp: "Introduce la duracion para calcular tamanos estimados. La duracion automatica requiere backend.",
-    minutes: "Minutos",
-    seconds: "Segundos",
-    estimates: "Tamanos estimados",
-    trim: "Preedicion",
-    trimStart: "Inicio",
-    trimEnd: "Final",
-    selectedDuration: "Duracion seleccionada",
-    selectedPreview: "La vista previa se actualiza con el tramo seleccionado.",
-    thumbnails: "Miniaturas disponibles",
-    open: "Abrir",
-    download: "Descargar",
-    backendTitle: "Descarga directa pendiente de backend",
-    backendBody: "Para MP3/MP4 hace falta un servidor que valide permisos, obtenga el medio y genere el archivo temporal. Usalo solo con contenido propio, con licencia o con permiso del titular.",
-    readyTitle: "Herramienta disponible en navegador",
-    readyBody: "Puedes extraer miniaturas, copiar URLs limpias y revisar datos basicos sin subir archivos.",
-    title: "Titulo",
-    author: "Canal",
-    unavailable: "No disponible"
+    addFiles: "Anadir audios",
+    selectFiles: "Seleccionar audios",
+    supported: "MP3, WAV, OGG, AAC, FLAC y otros formatos que pueda decodificar tu navegador.",
+    noFile: "Selecciona al menos un archivo de audio.",
+    decodeError: "No se pudo leer uno de los audios. Prueba con MP3, WAV u OGG.",
+    editorMode: "Modo de edicion",
+    trim: "Cortar audio",
+    merge: "Unir audios",
+    activeFile: "Audio activo",
+    start: "Inicio",
+    end: "Final",
+    fadeIn: "Fade in",
+    fadeOut: "Fade out",
+    speed: "Velocidad",
+    pitch: "Tono",
+    removeSilence: "Eliminar silencios",
+    silenceThreshold: "Umbral de silencio",
+    convertFormat: "Formato de salida",
+    browserWav: "WAV compatible con navegador",
+    sampleRate: "Sample rate",
+    normalize: "Normalizar volumen",
+    compressor: "Compresor de dinamica",
+    noiseGate: "Reducir ruido de fondo",
+    mono: "Estereo a mono",
+    splitChannels: "Separar canales L/R",
+    process: "Generar audio",
+    preview: "Reproducir seleccion",
+    processing: "Procesando audio...",
+    done: "Audio generado.",
+    download: "Descargar resultado",
+    note: "Todo se procesa en tu navegador. Para exportar MP3/AAC/FLAC reales haria falta conectar un backend con codificador dedicado."
   },
   en: {
-    label: "YouTube URL",
-    placeholder: "https://www.youtube.com/watch?v=...",
-    pasteHelp: "Supports youtube.com, youtu.be, Shorts and playlist links.",
-    invalid: "Paste a valid YouTube URL to see the information.",
-    preview: "Preview",
-    details: "Detected data",
-    videoId: "Video ID",
-    playlistId: "Playlist ID",
-    cleanUrl: "Clean URL",
-    embedUrl: "Embed URL",
-    duration: "Video duration",
-    durationHelp: "Enter duration to calculate estimated sizes. Automatic duration requires a backend.",
-    minutes: "Minutes",
-    seconds: "Seconds",
-    estimates: "Estimated sizes",
-    trim: "Pre-edit",
-    trimStart: "Start",
-    trimEnd: "End",
-    selectedDuration: "Selected duration",
-    selectedPreview: "The preview updates with the selected segment.",
-    thumbnails: "Available thumbnails",
-    open: "Open",
-    download: "Download",
-    backendTitle: "Direct download pending backend",
-    backendBody: "MP3/MP4 needs a server to validate permissions, fetch media and generate a temporary file. Use it only with your own, licensed or permitted content.",
-    readyTitle: "Browser tool available",
-    readyBody: "You can extract thumbnails, copy clean URLs and review basic data without uploading files.",
-    title: "Title",
-    author: "Channel",
-    unavailable: "Unavailable"
+    addFiles: "Add audio files",
+    selectFiles: "Select audio files",
+    supported: "MP3, WAV, OGG, AAC, FLAC and other formats your browser can decode.",
+    noFile: "Select at least one audio file.",
+    decodeError: "One audio file could not be read. Try MP3, WAV or OGG.",
+    editorMode: "Editing mode",
+    trim: "Cut audio",
+    merge: "Merge audio",
+    activeFile: "Active audio",
+    start: "Start",
+    end: "End",
+    fadeIn: "Fade in",
+    fadeOut: "Fade out",
+    speed: "Speed",
+    pitch: "Pitch",
+    removeSilence: "Remove silence",
+    silenceThreshold: "Silence threshold",
+    convertFormat: "Output format",
+    browserWav: "Browser-compatible WAV",
+    sampleRate: "Sample rate",
+    normalize: "Normalize volume",
+    compressor: "Dynamic compressor",
+    noiseGate: "Reduce background noise",
+    mono: "Stereo to mono",
+    splitChannels: "Split L/R channels",
+    process: "Generate audio",
+    preview: "Play selection",
+    processing: "Processing audio...",
+    done: "Audio generated.",
+    download: "Download result",
+    note: "Everything runs in your browser. Real MP3/AAC/FLAC export requires a backend with dedicated encoders."
   }
 } as const;
 
-const mp3Qualities = [
-  { label: "64 kbps", kbps: 64 },
-  { label: "128 kbps", kbps: 128 },
-  { label: "192 kbps", kbps: 192 },
-  { label: "256 kbps", kbps: 256 },
-  { label: "320 kbps", kbps: 320 }
-];
-
-const mp4Qualities = [
-  { label: "144p", mbPerMinute: 1.2 },
-  { label: "240p", mbPerMinute: 2.4 },
-  { label: "360p", mbPerMinute: 4.5 },
-  { label: "480p", mbPerMinute: 7 },
-  { label: "720p HD", mbPerMinute: 14 },
-  { label: "1080p Full HD", mbPerMinute: 26 },
-  { label: "1440p", mbPerMinute: 45 },
-  { label: "4K", mbPerMinute: 95 }
-];
-
-function YouTubeTool({ tool, locale }: { tool: Tool; locale: Locale }) {
-  const t = youtubeText[locale];
-  const [url, setUrl] = useState("");
-  const [minutes, setMinutes] = useState(3);
-  const [seconds, setSeconds] = useState(0);
-  const [trimStart, setTrimStart] = useState(0);
-  const [trimEnd, setTrimEnd] = useState(180);
-  const [oembed, setOembed] = useState<OEmbedInfo | null>(null);
-  const info = useMemo(() => parseYouTubeUrl(url), [url]);
-  const totalDurationSeconds = Math.max(1, Math.round(Math.max(0, minutes) * 60 + Math.max(0, Math.min(59, seconds))));
-  const selectedStart = Math.min(trimStart, totalDurationSeconds - 1);
-  const selectedEnd = Math.max(selectedStart + 1, Math.min(trimEnd, totalDurationSeconds));
-  const selectedDurationSeconds = selectedEnd - selectedStart;
-  const durationMinutes = selectedDurationSeconds / 60;
-  const isVideoTool = tool.output === "video";
-  const isAudioTool = tool.output === "audio";
-  const supportsTrim = isAudioTool || isVideoTool || tool.slug.includes("shorts");
-  const previewUrl = info ? `${info.embedUrl}?start=${selectedStart}&end=${selectedEnd}` : "";
-  const estimateRows = isAudioTool
-    ? mp3Qualities.map((quality) => ({
-        label: quality.label,
-        value: formatMegabytes((quality.kbps * durationMinutes * 60) / 8 / 1024)
-      }))
-    : mp4Qualities.map((quality) => ({
-        label: quality.label,
-        value: formatMegabytes(quality.mbPerMinute * durationMinutes)
-      }));
+function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
+  const t = audioText[locale];
+  const inputRef = useRef<HTMLInputElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const stopTimerRef = useRef<number | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [buffers, setBuffers] = useState<AudioBuffer[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [mode, setMode] = useState<"trim" | "merge">("trim");
+  const [startPct, setStartPct] = useState(0);
+  const [endPct, setEndPct] = useState(100);
+  const [fadeIn, setFadeIn] = useState(0.25);
+  const [fadeOut, setFadeOut] = useState(0.25);
+  const [speed, setSpeed] = useState(1);
+  const [pitch, setPitch] = useState(0);
+  const [removeSilence, setRemoveSilence] = useState(false);
+  const [silenceThreshold, setSilenceThreshold] = useState(0.018);
+  const [sampleRate, setSampleRate] = useState(44100);
+  const [normalize, setNormalize] = useState(true);
+  const [compressor, setCompressor] = useState(false);
+  const [noiseGate, setNoiseGate] = useState(false);
+  const [mono, setMono] = useState(false);
+  const [splitChannels, setSplitChannels] = useState(false);
+  const [resultUrl, setResultUrl] = useState("");
+  const [resultName, setResultName] = useState("audio.wav");
+  const [status, setStatus] = useState<"idle" | "processing" | "done" | "error">("idle");
+  const [message, setMessage] = useState("");
+  const activeBuffer = buffers[activeIndex];
+  const startSeconds = activeBuffer ? (startPct / 100) * activeBuffer.duration : 0;
+  const endSeconds = activeBuffer ? Math.max(startSeconds + 0.05, (endPct / 100) * activeBuffer.duration) : 0;
+  const isEnhancer = tool.slug === "mejorar-convertir-audio";
 
   useEffect(() => {
-    if (!info) {
-      setOembed(null);
+    if (!files[activeIndex]) {
+      setPreviewUrl("");
       return;
     }
 
-    let cancelled = false;
-    fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(info.canonicalUrl)}&format=json`)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data: OEmbedInfo | null) => {
-        if (!cancelled) setOembed(data);
-      })
-      .catch(() => {
-        if (!cancelled) setOembed(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [info]);
+    const nextUrl = URL.createObjectURL(files[activeIndex]);
+    setPreviewUrl(nextUrl);
+    return () => URL.revokeObjectURL(nextUrl);
+  }, [files, activeIndex]);
 
   useEffect(() => {
-    const total = Math.max(1, Math.round(Math.max(0, minutes) * 60 + Math.max(0, Math.min(59, seconds))));
-    setTrimStart((current) => Math.min(current, total - 1));
-    setTrimEnd((current) => Math.min(Math.max(current, 1), total));
-  }, [minutes, seconds]);
+    return () => {
+      if (stopTimerRef.current) window.clearInterval(stopTimerRef.current);
+      if (resultUrl) URL.revokeObjectURL(resultUrl);
+    };
+  }, [resultUrl]);
 
-  return (
-    <div className="tool-workspace youtube-workspace">
-      <div className="form-grid">
-        <div className="field">
-          <label htmlFor="youtube-url">{t.label}</label>
-          <input
-            id="youtube-url"
-            type="url"
-            value={url}
-            placeholder={t.placeholder}
-            onChange={(event) => setUrl(event.target.value)}
-          />
-          <p className="option-note">{t.pasteHelp}</p>
-        </div>
-      </div>
+  async function addFiles(fileList: FileList | null) {
+    const incoming = Array.from(fileList ?? []).filter((file) => file.type.startsWith("audio/") || /\.(mp3|wav|ogg|aac|m4a|flac)$/i.test(file.name));
+    if (!incoming.length) return;
 
-      {!info && <div className="tool-status processing">{t.invalid}</div>}
+    try {
+      setStatus("processing");
+      setMessage(t.processing);
+      const decoded = await Promise.all(incoming.map(decodeAudioFile));
+      setFiles(incoming);
+      setBuffers(decoded);
+      setActiveIndex(0);
+      setStartPct(0);
+      setEndPct(100);
+      setStatus("idle");
+      setMessage("");
+    } catch {
+      setStatus("error");
+      setMessage(t.decodeError);
+    }
+  }
 
-      {info && (
-        <div className="youtube-grid">
-          <section className="youtube-panel">
-            <h2>{t.preview}</h2>
-            <div className="youtube-embed">
-              <iframe
-                title="YouTube preview"
-                src={supportsTrim ? previewUrl : info.embedUrl}
-                key={supportsTrim ? previewUrl : info.embedUrl}
-                loading="lazy"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
-            </div>
-          </section>
+  function playSelection() {
+    const element = audioRef.current;
+    if (!element || !activeBuffer) return;
+    if (stopTimerRef.current) window.clearInterval(stopTimerRef.current);
+    element.pause();
+    element.currentTime = startSeconds;
+    void element.play();
+    stopTimerRef.current = window.setInterval(() => {
+      if (element.currentTime >= endSeconds) {
+        element.pause();
+        if (stopTimerRef.current) window.clearInterval(stopTimerRef.current);
+      }
+    }, 80);
+  }
 
-          <section className="youtube-panel">
-            <h2>{t.details}</h2>
-            <div className="youtube-data-list">
-              <YouTubeDataRow icon={<BadgeInfo size={16} />} label={t.title} value={oembed?.title ?? t.unavailable} />
-              <YouTubeDataRow icon={<BadgeInfo size={16} />} label={t.author} value={oembed?.author_name ?? t.unavailable} />
-              <YouTubeDataRow icon={<Link2 size={16} />} label={t.videoId} value={info.videoId} />
-              {info.playlistId && <YouTubeDataRow icon={<Link2 size={16} />} label={t.playlistId} value={info.playlistId} />}
-              <YouTubeDataRow icon={<Link2 size={16} />} label={t.cleanUrl} value={info.canonicalUrl} href={info.canonicalUrl} />
-              <YouTubeDataRow icon={<Link2 size={16} />} label={t.embedUrl} value={info.embedUrl} href={info.embedUrl} />
-            </div>
-          </section>
-
-          <section className="youtube-panel">
-            <h2>{t.duration}</h2>
-            <div className="youtube-duration">
-              <label>
-                <span>{t.minutes}</span>
-                <input type="number" min="0" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} />
-              </label>
-              <label>
-                <span>{t.seconds}</span>
-                <input type="number" min="0" max="59" value={seconds} onChange={(event) => setSeconds(Number(event.target.value))} />
-              </label>
-            </div>
-            <p className="option-note">{t.durationHelp}</p>
-          </section>
-
-          {(isAudioTool || isVideoTool) && (
-            <section className="youtube-panel">
-              <h2>{t.trim}</h2>
-              <div className="youtube-trim-controls">
-                <label>
-                  <span>{t.trimStart}: {formatDuration(selectedStart)}</span>
-                  <input
-                    type="range"
-                    min="0"
-                    max={Math.max(1, totalDurationSeconds - 1)}
-                    value={selectedStart}
-                    onChange={(event) => setTrimStart(Math.min(Number(event.target.value), selectedEnd - 1))}
-                  />
-                </label>
-                <label>
-                  <span>{t.trimEnd}: {formatDuration(selectedEnd)}</span>
-                  <input
-                    type="range"
-                    min="1"
-                    max={totalDurationSeconds}
-                    value={selectedEnd}
-                    onChange={(event) => setTrimEnd(Math.max(Number(event.target.value), selectedStart + 1))}
-                  />
-                </label>
-              </div>
-              <div className="youtube-selection-summary">
-                <strong>{t.selectedDuration}</strong>
-                <span>{formatDuration(selectedDurationSeconds)}</span>
-              </div>
-              <p className="option-note">{t.selectedPreview}</p>
-            </section>
-          )}
-
-          {(isAudioTool || isVideoTool) && (
-            <section className="youtube-panel">
-              <h2>{t.estimates}</h2>
-              <div className="youtube-quality-list">
-                {estimateRows.map((row) => (
-                  <div className="youtube-quality-row" key={row.label}>
-                    <span>{isAudioTool ? <Music size={16} /> : <Video size={16} />} {row.label}</span>
-                    <strong><HardDrive size={16} /> {row.value}</strong>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          <section className="youtube-panel youtube-panel-wide">
-            <h2>{t.thumbnails}</h2>
-            <div className="youtube-thumbnail-grid">
-              {getYouTubeThumbnails(info.videoId).map((thumbnail) => (
-                <a href={thumbnail.url} target="_blank" rel="noreferrer" className="youtube-thumbnail" key={thumbnail.label}>
-                  <img src={thumbnail.url} alt={`${thumbnail.label} thumbnail`} loading="lazy" />
-                  <span><ImageDown size={15} /> {thumbnail.label}</span>
-                </a>
-              ))}
-            </div>
-          </section>
-
-          <section className={`tool-status ${tool.processing === "client" ? "done" : "processing"} youtube-panel-wide`}>
-            <strong>{tool.processing === "client" ? t.readyTitle : t.backendTitle}</strong>
-            <p>{tool.processing === "client" ? t.readyBody : t.backendBody}</p>
-            <a className="button secondary" href={info.canonicalUrl} target="_blank" rel="noreferrer">
-              <Download size={16} /> {tool.processing === "client" ? t.open : t.download}
-            </a>
-          </section>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function YouTubeDataRow({ icon, label, value, href }: { icon: ReactNode; label: string; value: string; href?: string }) {
-  return (
-    <div className="youtube-data-row">
-      <span>{icon}{label}</span>
-      {href ? (
-        <a href={href} target="_blank" rel="noreferrer">{value}</a>
-      ) : (
-        <strong>{value}</strong>
-      )}
-    </div>
-  );
-}
-
-function parseYouTubeUrl(value: string): YouTubeInfo | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  try {
-    const url = new URL(trimmed);
-    const host = url.hostname.replace(/^www\./, "");
-    let videoId = "";
-
-    if (host === "youtu.be") {
-      videoId = url.pathname.split("/").filter(Boolean)[0] ?? "";
-    } else if (host === "youtube.com" || host === "m.youtube.com" || host === "music.youtube.com") {
-      if (url.pathname === "/watch") videoId = url.searchParams.get("v") ?? "";
-      if (url.pathname.startsWith("/shorts/")) videoId = url.pathname.split("/").filter(Boolean)[1] ?? "";
-      if (url.pathname.startsWith("/embed/")) videoId = url.pathname.split("/").filter(Boolean)[1] ?? "";
+  async function processAudio() {
+    if (!buffers.length) {
+      setStatus("error");
+      setMessage(t.noFile);
+      return;
     }
 
-    if (!/^[\w-]{11}$/.test(videoId)) return null;
+    setStatus("processing");
+    setMessage(t.processing);
+    if (resultUrl) URL.revokeObjectURL(resultUrl);
 
-    const playlistId = url.searchParams.get("list") ?? undefined;
-    const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}${playlistId ? `&list=${playlistId}` : ""}`;
-    return {
-      videoId,
-      playlistId,
-      canonicalUrl,
-      embedUrl: `https://www.youtube.com/embed/${videoId}`,
-      shortsUrl: `https://www.youtube.com/shorts/${videoId}`
-    };
-  } catch {
-    return null;
+    try {
+      const source = mode === "merge" && !isEnhancer ? mergeAudioBuffers(buffers) : cropAudioBuffer(activeBuffer, startSeconds, endSeconds);
+      let processed = source;
+      processed = applyFades(processed, fadeIn, fadeOut);
+      if (removeSilence) processed = removeSilentSections(processed, silenceThreshold);
+      const pitchRate = Math.pow(2, pitch / 12);
+      if (speed !== 1 || pitch !== 0) processed = resampleDuration(processed, speed * pitchRate);
+      if (noiseGate) processed = applyNoiseGate(processed, silenceThreshold);
+      if (compressor) processed = applySoftCompression(processed);
+      if (normalize) processed = normalizeAudio(processed);
+      if (mono) processed = convertToMono(processed);
+      if (sampleRate !== processed.sampleRate) processed = convertSampleRate(processed, sampleRate);
+
+      if (splitChannels && processed.numberOfChannels > 1) {
+        const JSZip = (await import("jszip")).default;
+        const zip = new JSZip();
+        for (let channel = 0; channel < processed.numberOfChannels; channel += 1) {
+          const oneChannel = makeAudioBuffer([processed.getChannelData(channel)], processed.sampleRate);
+          zip.file(`canal-${channel === 0 ? "L" : "R"}.wav`, audioBufferToWav(oneChannel));
+        }
+        const blob = await zip.generateAsync({ type: "blob" });
+        setResultName("canales-audio.zip");
+        setResultUrl(URL.createObjectURL(blob));
+      } else {
+        const blob = audioBufferToWav(processed);
+        setResultName(`${safeAudioName(files[activeIndex]?.name ?? "audio")}.wav`);
+        setResultUrl(URL.createObjectURL(blob));
+      }
+
+      setStatus("done");
+      setMessage(t.done);
+    } catch {
+      setStatus("error");
+      setMessage(t.decodeError);
+    }
+  }
+
+  return (
+    <div className="tool-workspace audio-workspace">
+      <input ref={inputRef} className="sr-only" type="file" accept="audio/*,.mp3,.wav,.ogg,.aac,.m4a,.flac" multiple onChange={(event) => addFiles(event.target.files)} />
+      <button type="button" className="dropzone audio-dropzone" onClick={() => inputRef.current?.click()}>
+        <UploadCloud size={32} aria-hidden="true" />
+        <strong>{files.length ? t.addFiles : t.selectFiles}</strong>
+        <span>{t.supported}</span>
+      </button>
+
+      {!!files.length && (
+        <div className="audio-grid">
+          <section className="audio-panel">
+            <h2>{t.activeFile}</h2>
+            <div className="audio-file-list">
+              {files.map((file, index) => (
+                <button type="button" className={index === activeIndex ? "active" : ""} onClick={() => setActiveIndex(index)} key={`${file.name}-${index}`}>
+                  <span>{file.name}</span>
+                  <small>{formatFileSize(file.size)}</small>
+                </button>
+              ))}
+            </div>
+            {previewUrl && <audio ref={audioRef} src={previewUrl} controls preload="metadata" />}
+            <button type="button" className="small-action" onClick={playSelection}>{t.preview}</button>
+          </section>
+
+          <section className="audio-panel">
+            <h2>{isEnhancer ? t.convertFormat : t.editorMode}</h2>
+            {!isEnhancer && (
+              <div className="segmented-wrap">
+                <button type="button" className={`small-action ${mode === "trim" ? "active" : ""}`} onClick={() => setMode("trim")}>{t.trim}</button>
+                <button type="button" className={`small-action ${mode === "merge" ? "active" : ""}`} onClick={() => setMode("merge")}>{t.merge}</button>
+              </div>
+            )}
+            <div className="field-row">
+              <label className="audio-range-label">
+                <span>{t.start}: {formatDuration(startSeconds)}</span>
+                <input type="range" min="0" max="99" value={startPct} disabled={mode === "merge" && !isEnhancer} onChange={(event) => setStartPct(Math.min(Number(event.target.value), endPct - 1))} />
+              </label>
+              <label className="audio-range-label">
+                <span>{t.end}: {formatDuration(endSeconds)}</span>
+                <input type="range" min="1" max="100" value={endPct} disabled={mode === "merge" && !isEnhancer} onChange={(event) => setEndPct(Math.max(Number(event.target.value), startPct + 1))} />
+              </label>
+            </div>
+            <div className="field-row">
+              <label className="field">
+                <span>{t.fadeIn}</span>
+                <input type="number" min="0" step="0.1" value={fadeIn} onChange={(event) => setFadeIn(Number(event.target.value))} />
+              </label>
+              <label className="field">
+                <span>{t.fadeOut}</span>
+                <input type="number" min="0" step="0.1" value={fadeOut} onChange={(event) => setFadeOut(Number(event.target.value))} />
+              </label>
+            </div>
+          </section>
+
+          <section className="audio-panel">
+            <h2>{isEnhancer ? (locale === "en" ? "Enhance" : "Mejorar audio") : (locale === "en" ? "Adjust" : "Ajustes")}</h2>
+            <label className="audio-range-label">
+              <span>{t.speed}: {speed.toFixed(2)}x</span>
+              <input type="range" min="0.5" max="2" step="0.05" value={speed} onChange={(event) => setSpeed(Number(event.target.value))} />
+            </label>
+            <label className="audio-range-label">
+              <span>{t.pitch}: {pitch > 0 ? "+" : ""}{pitch} st</span>
+              <input type="range" min="-12" max="12" step="1" value={pitch} onChange={(event) => setPitch(Number(event.target.value))} />
+            </label>
+            <label className="audio-range-label">
+              <span>{t.silenceThreshold}: {silenceThreshold.toFixed(3)}</span>
+              <input type="range" min="0.001" max="0.08" step="0.001" value={silenceThreshold} onChange={(event) => setSilenceThreshold(Number(event.target.value))} />
+            </label>
+            <div className="audio-toggle-grid">
+              <label><input type="checkbox" checked={removeSilence} onChange={(event) => setRemoveSilence(event.target.checked)} /> {t.removeSilence}</label>
+              <label><input type="checkbox" checked={normalize} onChange={(event) => setNormalize(event.target.checked)} /> {t.normalize}</label>
+              <label><input type="checkbox" checked={compressor} onChange={(event) => setCompressor(event.target.checked)} /> {t.compressor}</label>
+              <label><input type="checkbox" checked={noiseGate} onChange={(event) => setNoiseGate(event.target.checked)} /> {t.noiseGate}</label>
+              <label><input type="checkbox" checked={mono} onChange={(event) => setMono(event.target.checked)} /> {t.mono}</label>
+              <label><input type="checkbox" checked={splitChannels} onChange={(event) => setSplitChannels(event.target.checked)} /> {t.splitChannels}</label>
+            </div>
+          </section>
+
+          <section className="audio-panel">
+            <h2>{t.convertFormat}</h2>
+            <label className="field">
+              <span>{t.convertFormat}</span>
+              <select value="wav" disabled>
+                <option value="wav">{t.browserWav}</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>{t.sampleRate}</span>
+              <select value={sampleRate} onChange={(event) => setSampleRate(Number(event.target.value))}>
+                <option value={44100}>44.1 kHz</option>
+                <option value={48000}>48 kHz</option>
+              </select>
+            </label>
+            <p className="option-note">{t.note}</p>
+            <button type="button" className="button process-button" onClick={processAudio}>{t.process}</button>
+            {message && <div className={`tool-status ${status}`}>{message}</div>}
+            {resultUrl && (
+              <a className="button secondary process-button" href={resultUrl} download={resultName}>
+                {t.download}
+              </a>
+            )}
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}
+
+async function decodeAudioFile(file: File) {
+  const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  const context = new AudioContextClass();
+  try {
+    return await context.decodeAudioData(await file.arrayBuffer());
+  } finally {
+    await context.close();
   }
 }
 
-function getYouTubeThumbnails(videoId: string) {
-  return [
-    { label: "MaxRes", url: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` },
-    { label: "SD", url: `https://img.youtube.com/vi/${videoId}/sddefault.jpg` },
-    { label: "HQ", url: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` },
-    { label: "MQ", url: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` }
-  ];
+function cropAudioBuffer(buffer: AudioBuffer, startSeconds: number, endSeconds: number) {
+  const start = Math.max(0, Math.floor(startSeconds * buffer.sampleRate));
+  const end = Math.min(buffer.length, Math.max(start + 1, Math.floor(endSeconds * buffer.sampleRate)));
+  const channels = Array.from({ length: buffer.numberOfChannels }, (_, channel) => buffer.getChannelData(channel).slice(start, end));
+  return makeAudioBuffer(channels, buffer.sampleRate);
 }
 
-function formatMegabytes(value: number) {
-  if (!Number.isFinite(value) || value <= 0) return "0 MB";
-  if (value >= 1024) return `${(value / 1024).toFixed(2)} GB`;
-  return `${value.toFixed(value >= 10 ? 1 : 2)} MB`;
+function mergeAudioBuffers(buffers: AudioBuffer[]) {
+  const sampleRate = buffers[0].sampleRate;
+  const channelsCount = Math.max(...buffers.map((buffer) => buffer.numberOfChannels));
+  const totalLength = buffers.reduce((sum, buffer) => sum + Math.round(buffer.duration * sampleRate), 0);
+  const channels = Array.from({ length: channelsCount }, () => new Float32Array(totalLength));
+  let offset = 0;
+
+  buffers.forEach((buffer) => {
+    const converted = buffer.sampleRate === sampleRate ? buffer : convertSampleRate(buffer, sampleRate);
+    for (let channel = 0; channel < channelsCount; channel += 1) {
+      const source = converted.getChannelData(Math.min(channel, converted.numberOfChannels - 1));
+      channels[channel].set(source, offset);
+    }
+    offset += converted.length;
+  });
+
+  return makeAudioBuffer(channels, sampleRate);
 }
 
-function formatDuration(totalSeconds: number) {
-  const safeSeconds = Math.max(0, Math.round(totalSeconds));
-  const hours = Math.floor(safeSeconds / 3600);
-  const minutes = Math.floor((safeSeconds % 3600) / 60);
-  const seconds = safeSeconds % 60;
-  if (hours > 0) return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+function applyFades(buffer: AudioBuffer, fadeInSeconds: number, fadeOutSeconds: number) {
+  const channels = copyChannels(buffer);
+  const fadeInSamples = Math.min(buffer.length, Math.max(0, Math.floor(fadeInSeconds * buffer.sampleRate)));
+  const fadeOutSamples = Math.min(buffer.length, Math.max(0, Math.floor(fadeOutSeconds * buffer.sampleRate)));
+
+  channels.forEach((data) => {
+    for (let index = 0; index < fadeInSamples; index += 1) data[index] *= index / Math.max(1, fadeInSamples);
+    for (let index = 0; index < fadeOutSamples; index += 1) {
+      const target = data.length - 1 - index;
+      data[target] *= index / Math.max(1, fadeOutSamples);
+    }
+  });
+
+  return makeAudioBuffer(channels, buffer.sampleRate);
+}
+
+function removeSilentSections(buffer: AudioBuffer, threshold: number) {
+  const keep: number[] = [];
+  const windowSize = Math.max(1, Math.floor(buffer.sampleRate * 0.018));
+  for (let index = 0; index < buffer.length; index += windowSize) {
+    let peak = 0;
+    for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
+      const data = buffer.getChannelData(channel);
+      for (let cursor = index; cursor < Math.min(index + windowSize, data.length); cursor += 1) {
+        peak = Math.max(peak, Math.abs(data[cursor]));
+      }
+    }
+    if (peak >= threshold) keep.push(index);
+  }
+
+  if (!keep.length) return buffer;
+  const channels = Array.from({ length: buffer.numberOfChannels }, () => new Float32Array(keep.length * windowSize));
+  keep.forEach((sourceIndex, chunkIndex) => {
+    for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
+      channels[channel].set(buffer.getChannelData(channel).slice(sourceIndex, sourceIndex + windowSize), chunkIndex * windowSize);
+    }
+  });
+  return makeAudioBuffer(channels, buffer.sampleRate);
+}
+
+function resampleDuration(buffer: AudioBuffer, factor: number) {
+  const safeFactor = Math.max(0.25, Math.min(4, factor));
+  const nextLength = Math.max(1, Math.floor(buffer.length / safeFactor));
+  const channels = copyChannels(buffer).map((data) => resampleArray(data, nextLength));
+  return makeAudioBuffer(channels, buffer.sampleRate);
+}
+
+function convertSampleRate(buffer: AudioBuffer, nextSampleRate: number) {
+  const nextLength = Math.max(1, Math.floor((buffer.length * nextSampleRate) / buffer.sampleRate));
+  const channels = copyChannels(buffer).map((data) => resampleArray(data, nextLength));
+  return makeAudioBuffer(channels, nextSampleRate);
+}
+
+function normalizeAudio(buffer: AudioBuffer) {
+  const channels = copyChannels(buffer);
+  let peak = 0;
+  channels.forEach((data) => {
+    for (let index = 0; index < data.length; index += 1) peak = Math.max(peak, Math.abs(data[index]));
+  });
+  if (peak <= 0) return buffer;
+  const gain = Math.min(4, 0.94 / peak);
+  channels.forEach((data) => {
+    for (let index = 0; index < data.length; index += 1) data[index] *= gain;
+  });
+  return makeAudioBuffer(channels, buffer.sampleRate);
+}
+
+function applyNoiseGate(buffer: AudioBuffer, threshold: number) {
+  const channels = copyChannels(buffer);
+  channels.forEach((data) => {
+    for (let index = 0; index < data.length; index += 1) {
+      if (Math.abs(data[index]) < threshold) data[index] *= 0.18;
+    }
+  });
+  return makeAudioBuffer(channels, buffer.sampleRate);
+}
+
+function applySoftCompression(buffer: AudioBuffer) {
+  const channels = copyChannels(buffer);
+  channels.forEach((data) => {
+    for (let index = 0; index < data.length; index += 1) {
+      const sample = data[index];
+      data[index] = Math.tanh(sample * 1.8) / 1.8;
+    }
+  });
+  return makeAudioBuffer(channels, buffer.sampleRate);
+}
+
+function convertToMono(buffer: AudioBuffer) {
+  if (buffer.numberOfChannels === 1) return buffer;
+  const mono = new Float32Array(buffer.length);
+  for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
+    const data = buffer.getChannelData(channel);
+    for (let index = 0; index < data.length; index += 1) mono[index] += data[index] / buffer.numberOfChannels;
+  }
+  return makeAudioBuffer([mono], buffer.sampleRate);
+}
+
+function copyChannels(buffer: AudioBuffer) {
+  return Array.from({ length: buffer.numberOfChannels }, (_, channel) => new Float32Array(buffer.getChannelData(channel)));
+}
+
+function resampleArray(data: Float32Array, nextLength: number) {
+  const result = new Float32Array(nextLength);
+  const scale = (data.length - 1) / Math.max(1, nextLength - 1);
+  for (let index = 0; index < nextLength; index += 1) {
+    const position = index * scale;
+    const before = Math.floor(position);
+    const after = Math.min(data.length - 1, before + 1);
+    const ratio = position - before;
+    result[index] = data[before] * (1 - ratio) + data[after] * ratio;
+  }
+  return result;
+}
+
+function makeAudioBuffer(channels: Float32Array[], sampleRate: number) {
+  const length = Math.max(1, ...channels.map((channel) => channel.length));
+  const context = new OfflineAudioContext(channels.length, length, sampleRate);
+  const buffer = context.createBuffer(channels.length, length, sampleRate);
+  channels.forEach((channel, index) => buffer.copyToChannel(channel.slice(0, length), index));
+  return buffer;
+}
+
+function audioBufferToWav(buffer: AudioBuffer) {
+  const bytesPerSample = 2;
+  const blockAlign = buffer.numberOfChannels * bytesPerSample;
+  const dataSize = buffer.length * blockAlign;
+  const arrayBuffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(arrayBuffer);
+  let offset = 0;
+
+  writeString(view, offset, "RIFF"); offset += 4;
+  view.setUint32(offset, 36 + dataSize, true); offset += 4;
+  writeString(view, offset, "WAVE"); offset += 4;
+  writeString(view, offset, "fmt "); offset += 4;
+  view.setUint32(offset, 16, true); offset += 4;
+  view.setUint16(offset, 1, true); offset += 2;
+  view.setUint16(offset, buffer.numberOfChannels, true); offset += 2;
+  view.setUint32(offset, buffer.sampleRate, true); offset += 4;
+  view.setUint32(offset, buffer.sampleRate * blockAlign, true); offset += 4;
+  view.setUint16(offset, blockAlign, true); offset += 2;
+  view.setUint16(offset, 16, true); offset += 2;
+  writeString(view, offset, "data"); offset += 4;
+  view.setUint32(offset, dataSize, true); offset += 4;
+
+  for (let index = 0; index < buffer.length; index += 1) {
+    for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
+      const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[index]));
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      offset += bytesPerSample;
+    }
+  }
+
+  return new Blob([arrayBuffer], { type: "audio/wav" });
+}
+
+function writeString(view: DataView, offset: number, value: string) {
+  for (let index = 0; index < value.length; index += 1) view.setUint8(offset + index, value.charCodeAt(index));
+}
+
+function formatDuration(value: number) {
+  const total = Math.max(0, Math.round(value));
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function safeAudioName(name: string) {
+  return name.replace(/\.[^.]+$/, "").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "") || "audio";
 }
 
 function PdfUploader({ tool, locale }: { tool: Tool; locale: Locale }) {

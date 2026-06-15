@@ -164,37 +164,31 @@ function ToolPageContent({ tool: sourceTool, locale }: { tool: Tool; locale: Loc
 
 function getToolSeoContent(tool: Tool, locale: Locale = "es") {
   if (locale === "en") return getEnglishToolSeoContent(tool);
-  if (tool.kind === "youtube") {
-    const isBackend = tool.processing === "backend-required";
+  if (tool.kind === "audio") {
     return {
-      heading: `${tool.title} online`,
-      intro: `${tool.description} Esta herramienta esta orientada a revisar enlaces de YouTube de forma rapida y a trabajar solo con contenido propio, con licencia o con permiso del titular.`,
-      steps: [
-        "Pega la URL de YouTube, youtu.be, Shorts o playlist.",
-        "Comprueba el ID detectado, la vista previa y las miniaturas disponibles.",
-        tool.output === "audio" || tool.output === "video" ? "Introduce la duracion para estimar el tamano por calidad." : "Abre o copia los enlaces generados que necesites.",
-        isBackend ? "Conecta el backend para activar descargas directas autorizadas." : "Abre la miniatura o URL limpia desde el navegador."
-      ],
+      heading: `${tool.title} gratis y online`,
+      intro: `${tool.description} El procesamiento se realiza en el navegador usando Web Audio API, por lo que los archivos no se suben a un servidor.`,
+      steps: ["Sube uno o varios archivos de audio.", "Elige el tramo, union, fades, velocidad, canales o mejoras disponibles.", "Reproduce la seleccion para comprobar el resultado.", "Genera y descarga el archivo WAV final."],
       faqs: [
         {
           question: `Puedo usar ${tool.title} gratis?`,
-          answer: "Si, la pagina y el analisis del enlace son gratuitos. Las descargas o conversiones pueden requerir backend."
+          answer: "Si, la herramienta funciona gratis en el navegador."
         },
         {
-          question: "Puedo descargar cualquier video?",
-          answer: "No. Debes usar estas herramientas solo con contenido propio, con licencia, de dominio publico o con permiso del titular de derechos."
+          question: "Se suben mis audios a un servidor?",
+          answer: "No. La edicion disponible se procesa localmente en tu navegador."
         },
         {
-          question: "Por que algunas funciones requieren backend?",
-          answer: "El navegador no puede obtener ni convertir medios de YouTube de forma fiable. Para MP3, MP4, playlists o transcripciones hace falta un servidor temporal."
+          question: "Puede exportar MP3, AAC, OGG o FLAC?",
+          answer: "La salida estable en navegador es WAV. Para codificar MP3, AAC o FLAC reales haria falta conectar un backend con codificadores dedicados."
         },
         {
-          question: "La herramienta guarda enlaces o archivos?",
-          answer: "La parte disponible en navegador no sube archivos. Un backend de descarga deberia usar archivos temporales y limpieza automatica."
+          question: "Puedo unir varios audios?",
+          answer: tool.slug === "editor-audio" ? "Si, selecciona varios archivos y usa el modo Unir audios." : "Esta herramienta se centra en mejora y conversion; para unir archivos usa el Editor de audio."
         },
         {
-          question: "Funciona con Shorts?",
-          answer: "Si, el detector reconoce enlaces de Shorts y extrae el ID del video para vista previa y miniaturas."
+          question: "Funciona en movil?",
+          answer: "Si, aunque archivos largos consumen bastante memoria y funcionan mejor en escritorio."
         }
       ]
     };
@@ -341,37 +335,31 @@ function getToolSeoContent(tool: Tool, locale: Locale = "es") {
 }
 
 function getEnglishToolSeoContent(tool: Tool) {
-  if (tool.kind === "youtube") {
-    const isBackend = tool.processing === "backend-required";
+  if (tool.kind === "audio") {
     return {
-      heading: `${tool.title} online`,
-      intro: `${tool.description} This tool is designed to review YouTube links quickly and to work only with your own, licensed or permitted content.`,
-      steps: [
-        "Paste a YouTube, youtu.be, Shorts or playlist URL.",
-        "Check the detected ID, preview and available thumbnails.",
-        tool.output === "audio" || tool.output === "video" ? "Enter the duration to estimate size by quality." : "Open or copy the generated links you need.",
-        isBackend ? "Connect the backend to enable authorized direct downloads." : "Open the thumbnail or clean URL from the browser."
-      ],
+      heading: `${tool.title} free online`,
+      intro: `${tool.description} Processing runs in the browser with the Web Audio API, so files are not uploaded to a server.`,
+      steps: ["Upload one or more audio files.", "Choose the segment, merge mode, fades, speed, channels or enhancements.", "Play the selection to check it.", "Generate and download the final WAV file."],
       faqs: [
         {
           question: `Can I use ${tool.title} for free?`,
-          answer: "Yes, link analysis is free. Downloads or conversions may require a backend."
+          answer: "Yes, the tool works for free in the browser."
         },
         {
-          question: "Can I download any video?",
-          answer: "No. Use these tools only with your own content, licensed content, public domain content or permission from the rights holder."
+          question: "Are my audio files uploaded?",
+          answer: "No. Available editing runs locally in your browser."
         },
         {
-          question: "Why do some functions require a backend?",
-          answer: "The browser cannot reliably fetch or convert YouTube media. MP3, MP4, playlists and transcripts need a temporary server workflow."
+          question: "Can it export MP3, AAC, OGG or FLAC?",
+          answer: "The stable browser output is WAV. Real MP3, AAC or FLAC encoding requires a backend with dedicated encoders."
         },
         {
-          question: "Does the tool store links or files?",
-          answer: "The browser part does not upload files. A download backend should use temporary files and automatic cleanup."
+          question: "Can I merge multiple audio files?",
+          answer: tool.slug === "editor-audio" ? "Yes, select multiple files and use Merge audio mode." : "This tool focuses on enhancement and conversion; use the Audio editor to merge files."
         },
         {
-          question: "Does it work with Shorts?",
-          answer: "Yes, the detector recognizes Shorts links and extracts the video ID for preview and thumbnails."
+          question: "Does it work on mobile?",
+          answer: "Yes, although long files use a lot of memory and work better on desktop."
         }
       ]
     };

@@ -3,8 +3,6 @@ import type { ComponentType } from "react";
 import {
   ArrowRight,
   ArrowLeftRight,
-  AudioLines,
-  BadgeInfo,
   Binary,
   BookText,
   Box,
@@ -21,14 +19,14 @@ import {
   GitCompare,
   Globe2,
   Hash,
-  ImageDown,
   Languages,
   Lock,
   LockKeyhole,
   Map,
   Minimize2,
+  Music2,
+  SlidersHorizontal,
   PenTool,
-  ListVideo,
   Presentation,
   Ruler,
   RotateCw,
@@ -37,13 +35,10 @@ import {
   Shield,
   Split,
   Stamp,
-  Tags,
   Thermometer,
-  Video,
   UnlockKeyhole,
   Weight,
   Wrench,
-  Youtube,
   Zap as ZapIcon
 } from "lucide-react";
 import type { Tool, ToolKind } from "../data/tools";
@@ -53,7 +48,7 @@ import { ui } from "../../lib/i18n";
 const iconMap: Partial<Record<ToolKind, ComponentType<{ size?: number; className?: string }>>> = {
   pdf: FileText,
   converter: ArrowLeftRight,
-  youtube: Youtube
+  audio: Music2
 };
 
 const toolIconMap: Record<string, ComponentType<{ size?: number; className?: string }>> = {
@@ -95,14 +90,8 @@ const toolIconMap: Record<string, ComponentType<{ size?: number; className?: str
   area: Map,
   volumen: Box,
   energia: ZapIcon,
-  "youtube-a-mp3": AudioLines,
-  "youtube-a-mp4": Video,
-  "youtube-thumbnail-downloader": ImageDown,
-  "youtube-metadata-viewer": BadgeInfo,
-  "youtube-shorts-downloader": Youtube,
-  "youtube-playlist-downloader": ListVideo,
-  "youtube-transcript-extractor": ScanText,
-  "youtube-tags-extractor": Tags
+  "editor-audio": Music2,
+  "mejorar-convertir-audio": SlidersHorizontal
 };
 
 const pdfAccentByGroup: Record<string, string> = {
@@ -162,7 +151,7 @@ function getAccent(tool: Tool) {
   if (tool.categorySlug === "pdf") return pdfAccentByGroup[tool.group] ?? pdfAccentByGroup[spanishGroup(tool.group)] ?? "coral";
   if (tool.categorySlug === "img") return "blue";
   if (tool.categorySlug === "conversor") return "green";
-  if (tool.categorySlug === "youtube") return "coral";
+  if (tool.categorySlug === "audio") return "purple";
   return "yellow";
 }
 
@@ -175,8 +164,6 @@ function spanishGroup(group: string) {
 
 function getOutputLabel(tool: Tool) {
   if (tool.slug === "pdf-a-jpg") return "IMG";
-  if (tool.output === "audio") return "MP3";
-  if (tool.output === "video") return "MP4";
   if (tool.output === "jpg") return "JPG";
   return null;
 }

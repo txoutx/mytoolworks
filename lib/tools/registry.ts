@@ -1,4 +1,4 @@
-export type ToolCategorySlug = "pdf" | "img" | "conversor" | "youtube";
+export type ToolCategorySlug = "pdf" | "img" | "conversor" | "audio";
 
 export type ToolKind =
   | "pdf"
@@ -10,7 +10,7 @@ export type ToolKind =
   | "letter"
   | "summary"
   | "grammar"
-  | "youtube";
+  | "audio";
 
 export type ProcessingMode = "client" | "backend-required";
 
@@ -37,8 +37,8 @@ export type Tool = {
   status: "Disponible" | "Requiere backend";
   kind: ToolKind;
   processing: ProcessingMode;
-  input: "single-file" | "multi-file" | "office-file" | "html" | "url";
-  output: "pdf" | "jpg" | "text" | "calculation" | "audio" | "video" | "metadata" | "image";
+  input: "single-file" | "multi-file" | "office-file" | "html";
+  output: "pdf" | "jpg" | "text" | "calculation" | "audio";
   adProfile: AdProfile;
 };
 
@@ -65,11 +65,11 @@ export const categories: ToolCategory[] = [
     description: "Convierte divisas, unidades, horas, zonas horarias, temperatura, peso, datos digitales, area, volumen y energia."
   },
   {
-    slug: "youtube",
-    title: "Herramientas YouTube",
-    shortTitle: "YouTube",
-    navLabel: "YouTube",
-    description: "Consulta metadatos, miniaturas, estimaciones de descarga y utilidades para enlaces de YouTube."
+    slug: "audio",
+    title: "Herramientas de audio",
+    shortTitle: "Audio",
+    navLabel: "Audio",
+    description: "Corta, une, convierte, comprime, mejora y ajusta archivos de audio desde el navegador."
   }
 ];
 
@@ -89,11 +89,14 @@ const converterBase = {
   adProfile: "light" as const
 };
 
-const youtubeBase = {
-  categorySlug: "youtube" as const,
-  kind: "youtube" as const,
-  input: "url" as const,
-  adProfile: "high-intent" as const
+const audioBase = {
+  categorySlug: "audio" as const,
+  kind: "audio" as const,
+  status: "Disponible" as const,
+  processing: "client" as const,
+  input: "multi-file" as const,
+  output: "audio" as const,
+  adProfile: "standard" as const
 };
 
 export const tools: Tool[] = [
@@ -382,108 +385,24 @@ export const tools: Tool[] = [
     keywords: ["conversor energia", "julios a calorias", "kwh a joules"]
   },
   {
-    ...youtubeBase,
-    slug: "youtube-a-mp3",
-    route: "/youtube/youtube-a-mp3",
-    title: "YouTube a MP3",
-    h1: "Convertir YouTube a MP3",
-    group: "Convertidores",
-    description: "Pega una URL de YouTube, revisa el video y estima el tamano de MP3 por calidad antes de descargar contenido propio o con permiso.",
-    keywords: ["youtube a mp3", "convertir youtube a mp3", "descargar audio youtube", "youtube mp3 320 kbps"],
-    status: "Requiere backend",
-    processing: "backend-required",
-    output: "audio"
+    ...audioBase,
+    slug: "editor-audio",
+    route: "/audio/editor-audio",
+    title: "Editor de audio",
+    h1: "Editor de audio online",
+    group: "Edicion",
+    description: "Corta MP3, WAV y otros audios, une varios archivos, aplica fade in/out, cambia velocidad, elimina silencios y exporta WAV.",
+    keywords: ["editor de audio", "cortar audio", "trim audio", "unir audios", "fade audio", "cambiar velocidad audio"]
   },
   {
-    ...youtubeBase,
-    slug: "youtube-a-mp4",
-    route: "/youtube/youtube-a-mp4",
-    title: "YouTube a MP4",
-    h1: "Convertir YouTube a MP4",
-    group: "Convertidores",
-    description: "Pega una URL de YouTube, muestra vista previa y compara calidades de video desde 144p hasta 4K para contenido autorizado.",
-    keywords: ["youtube a mp4", "descargar video youtube", "youtube mp4 1080p", "youtube 4k downloader"],
-    status: "Requiere backend",
-    processing: "backend-required",
-    output: "video"
-  },
-  {
-    ...youtubeBase,
-    slug: "youtube-thumbnail-downloader",
-    route: "/youtube/youtube-thumbnail-downloader",
-    title: "YouTube Thumbnail Downloader",
-    h1: "Descargar miniatura de YouTube",
-    group: "Miniaturas",
-    description: "Extrae el ID del video y abre miniaturas de YouTube en varias resoluciones como maxres, sd, hq y mq.",
-    keywords: ["youtube thumbnail downloader", "descargar miniatura youtube", "thumbnail youtube", "imagen youtube"],
-    status: "Disponible",
-    processing: "client",
-    output: "image"
-  },
-  {
-    ...youtubeBase,
-    slug: "youtube-metadata-viewer",
-    route: "/youtube/youtube-metadata-viewer",
-    title: "YouTube Metadata Viewer",
-    h1: "Ver metadatos de YouTube",
-    group: "Analisis",
-    description: "Pega un enlace de YouTube para ver ID del video, miniaturas, enlace embed, enlaces limpios y datos basicos.",
-    keywords: ["youtube metadata viewer", "ver metadatos youtube", "youtube video id", "youtube embed"],
-    status: "Disponible",
-    processing: "client",
-    output: "metadata"
-  },
-  {
-    ...youtubeBase,
-    slug: "youtube-shorts-downloader",
-    route: "/youtube/youtube-shorts-downloader",
-    title: "YouTube Shorts Downloader",
-    h1: "YouTube Shorts Downloader",
-    group: "Shorts",
-    description: "Prepara enlaces de Shorts, muestra vista previa y deja listo el flujo de descarga para contenido propio o autorizado.",
-    keywords: ["youtube shorts downloader", "descargar shorts youtube", "youtube shorts mp4"],
-    status: "Requiere backend",
-    processing: "backend-required",
-    output: "video"
-  },
-  {
-    ...youtubeBase,
-    slug: "youtube-playlist-downloader",
-    route: "/youtube/youtube-playlist-downloader",
-    title: "YouTube Playlist Downloader",
-    h1: "YouTube Playlist Downloader",
-    group: "Playlists",
-    description: "Detecta enlaces de playlist de YouTube y prepara una descarga por lotes cuando se conecte el backend.",
-    keywords: ["youtube playlist downloader", "descargar playlist youtube", "playlist youtube mp3"],
-    status: "Requiere backend",
-    processing: "backend-required",
-    output: "video"
-  },
-  {
-    ...youtubeBase,
-    slug: "youtube-transcript-extractor",
-    route: "/youtube/youtube-transcript-extractor",
-    title: "YouTube Transcript Extractor",
-    h1: "Extraer transcripcion de YouTube",
-    group: "Texto",
-    description: "Herramienta preparada para extraer transcripciones disponibles de videos de YouTube cuando se conecte un backend.",
-    keywords: ["youtube transcript extractor", "transcripcion youtube", "subtitulos youtube", "extraer texto video"],
-    status: "Requiere backend",
-    processing: "backend-required",
-    output: "text"
-  },
-  {
-    ...youtubeBase,
-    slug: "youtube-tags-extractor",
-    route: "/youtube/youtube-tags-extractor",
-    title: "YouTube Tags Extractor",
-    h1: "Extraer tags de YouTube",
-    group: "SEO YouTube",
-    description: "Analiza enlaces de YouTube y deja preparada la extraccion de etiquetas y datos SEO con backend.",
-    keywords: ["youtube tags extractor", "extraer tags youtube", "etiquetas youtube", "seo youtube"],
-    status: "Requiere backend",
-    processing: "backend-required",
-    output: "metadata"
+    ...audioBase,
+    slug: "mejorar-convertir-audio",
+    route: "/audio/mejorar-convertir-audio",
+    title: "Mejorar y convertir audio",
+    h1: "Mejorar y convertir audio online",
+    group: "Mejora y conversion",
+    description: "Convierte audio a WAV, ajusta sample rate, normaliza volumen, comprime dinamica, convierte estereo a mono, separa canales y reduce ruido basico.",
+    keywords: ["convertidor audio", "mp3 a wav", "mejorar audio", "remove noise audio", "audio compressor", "sample rate converter", "stereo to mono"]
   }
 ];
 
