@@ -29,6 +29,14 @@ type PlacedSignature = {
   scale: number;
 };
 
+type AudioClip = {
+  id: string;
+  fileIndex: number;
+  start: number;
+  end: number;
+  label: string;
+};
+
 const formatEuro = new Intl.NumberFormat("es-ES", {
   style: "currency",
   currency: "EUR",
@@ -96,6 +104,15 @@ const audioText = {
     editorMode: "Modo de edicion",
     trim: "Cortar audio",
     merge: "Unir audios",
+    waveform: "Forma de onda",
+    timeline: "Timeline de cortes",
+    addCut: "Anadir corte al timeline",
+    clearCuts: "Limpiar cortes",
+    moveLeft: "Mover antes",
+    moveRight: "Mover despues",
+    removeCut: "Quitar corte",
+    noCuts: "Crea cortes visuales para reordenarlos o usa el audio seleccionado completo.",
+    renderedPreview: "Preescucha del resultado",
     activeFile: "Audio activo",
     start: "Inicio",
     end: "Final",
@@ -129,6 +146,15 @@ const audioText = {
     editorMode: "Editing mode",
     trim: "Cut audio",
     merge: "Merge audio",
+    waveform: "Waveform",
+    timeline: "Cut timeline",
+    addCut: "Add cut to timeline",
+    clearCuts: "Clear cuts",
+    moveLeft: "Move earlier",
+    moveRight: "Move later",
+    removeCut: "Remove cut",
+    noCuts: "Create visual cuts to reorder them or use the selected audio directly.",
+    renderedPreview: "Rendered preview",
     activeFile: "Active audio",
     start: "Start",
     end: "End",
@@ -159,9 +185,11 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
   const t = audioText[locale];
   const inputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const waveformRef = useRef<HTMLCanvasElement>(null);
   const stopTimerRef = useRef<number | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [buffers, setBuffers] = useState<AudioBuffer[]>([]);
+  const [clips, setClips] = useState<AudioClip[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [previewUrl, setPreviewUrl] = useState("");
   const [mode, setMode] = useState<"trim" | "merge">("trim");
@@ -187,6 +215,10 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
   const startSeconds = activeBuffer ? (startPct / 100) * activeBuffer.duration : 0;
   const endSeconds = activeBuffer ? Math.max(startSeconds + 0.05, (endPct / 100) * activeBuffer.duration) : 0;
   const isEnhancer = tool.slug === "mejorar-convertir-audio";
+
+  useEffect(() => {
+    drawWaveform(waveformRef.current, activeBuffer, startSeconds, endSeconds);
+  }, [activeBuffer, startSeconds, endSeconds]);
 
   useEffect(() => {
     if (!files[activeIndex]) {
@@ -216,6 +248,7 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
       const decoded = await Promise.all(incoming.map(decodeAudioFile));
       setFiles(incoming);
       setBuffers(decoded);
+      setClips([]);
       setActiveIndex(0);
       setStartPct(0);
       setEndPct(100);
@@ -242,6 +275,41 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
     }, 80);
   }
 
+  function addCutToTimeline() {
+    if (!activeBuffer || !files[activeIndex]) return;
+    setClips((current) => [
+      ...current,
+      {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        fileIndex: activeIndex,
+        start: startSeconds,
+        end: endSeconds,
+        label: files[activeIndex].name
+      }
+    ]);
+  }
+
+  function removeClip(id: string) {
+    setClips((current) => current.filter((clip) => clip.id !== id));
+  }
+
+  function moveClip(id: string, direction: -1 | 1) {
+    setClips((current) => {
+      const index = current.findIndex((clip) => clip.id === id);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= current.length) return current;
+      return moveArrayItem(current, index, target);
+    });
+  }
+
+  function selectClip(clip: AudioClip) {
+    setActiveIndex(clip.fileIndex);
+    const buffer = buffers[clip.fileIndex];
+    if (!buffer) return;
+    setStartPct(Math.max(0, Math.min(99, (clip.start / buffer.duration) * 100)));
+    setEndPct(Math.max(1, Math.min(100, (clip.end / buffer.duration) * 100)));
+  }
+
   async function processAudio() {
     if (!buffers.length) {
       setStatus("error");
@@ -254,7 +322,12 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
     if (resultUrl) URL.revokeObjectURL(resultUrl);
 
     try {
-      const source = mode === "merge" && !isEnhancer ? mergeAudioBuffers(buffers) : cropAudioBuffer(activeBuffer, startSeconds, endSeconds);
+      const source =
+        clips.length && !isEnhancer
+          ? renderAudioClips(clips, buffers)
+          : mode === "merge" && !isEnhancer
+            ? mergeAudioBuffers(buffers)
+            : cropAudioBuffer(activeBuffer, startSeconds, endSeconds);
       let processed = source;
       processed = applyFades(processed, fadeIn, fadeOut);
       if (removeSilence) processed = removeSilentSections(processed, silenceThreshold);
@@ -333,6 +406,20 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
                 <input type="range" min="1" max="100" value={endPct} disabled={mode === "merge" && !isEnhancer} onChange={(event) => setEndPct(Math.max(Number(event.target.value), startPct + 1))} />
               </label>
             </div>
+            <div className="audio-waveform-wrap">
+              <div className="audio-waveform-head">
+                <strong>{t.waveform}</strong>
+                <span>{formatDuration(startSeconds)} - {formatDuration(endSeconds)}</span>
+              </div>
+              <div className="audio-waveform-stage">
+                <canvas ref={waveformRef} width={960} height={180} aria-label={t.waveform} />
+              </div>
+              {!isEnhancer && (
+                <button type="button" className="small-action" onClick={addCutToTimeline}>
+                  {t.addCut}
+                </button>
+              )}
+            </div>
             <div className="field-row">
               <label className="field">
                 <span>{t.fadeIn}</span>
@@ -344,6 +431,34 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
               </label>
             </div>
           </section>
+
+          {!isEnhancer && (
+            <section className="audio-panel audio-panel-wide">
+              <div className="audio-timeline-header">
+                <h2>{t.timeline}</h2>
+                {!!clips.length && <button type="button" className="small-action" onClick={() => setClips([])}>{t.clearCuts}</button>}
+              </div>
+              {clips.length ? (
+                <div className="audio-timeline">
+                  {clips.map((clip, index) => (
+                    <article className="audio-clip" key={clip.id} onClick={() => selectClip(clip)}>
+                      <div>
+                        <strong>{index + 1}. {clip.label}</strong>
+                        <span>{formatDuration(clip.start)} - {formatDuration(clip.end)} ({formatDuration(clip.end - clip.start)})</span>
+                      </div>
+                      <div className="audio-clip-actions">
+                        <button type="button" aria-label={t.moveLeft} onClick={(event) => { event.stopPropagation(); moveClip(clip.id, -1); }}>‹</button>
+                        <button type="button" aria-label={t.moveRight} onClick={(event) => { event.stopPropagation(); moveClip(clip.id, 1); }}>›</button>
+                        <button type="button" aria-label={t.removeCut} onClick={(event) => { event.stopPropagation(); removeClip(clip.id); }}>×</button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="option-note">{t.noCuts}</p>
+              )}
+            </section>
+          )}
 
           <section className="audio-panel">
             <h2>{isEnhancer ? (locale === "en" ? "Enhance" : "Mejorar audio") : (locale === "en" ? "Adjust" : "Ajustes")}</h2>
@@ -388,9 +503,17 @@ function AudioTool({ tool, locale }: { tool: Tool; locale: Locale }) {
             <button type="button" className="button process-button" onClick={processAudio}>{t.process}</button>
             {message && <div className={`tool-status ${status}`}>{message}</div>}
             {resultUrl && (
-              <a className="button secondary process-button" href={resultUrl} download={resultName}>
-                {t.download}
-              </a>
+              <>
+                {!splitChannels && (
+                  <div className="audio-result-preview">
+                    <strong>{t.renderedPreview}</strong>
+                    <audio controls src={resultUrl} />
+                  </div>
+                )}
+                <a className="button secondary process-button" href={resultUrl} download={resultName}>
+                  {t.download}
+                </a>
+              </>
             )}
           </section>
         </div>
@@ -414,6 +537,69 @@ function cropAudioBuffer(buffer: AudioBuffer, startSeconds: number, endSeconds: 
   const end = Math.min(buffer.length, Math.max(start + 1, Math.floor(endSeconds * buffer.sampleRate)));
   const channels = Array.from({ length: buffer.numberOfChannels }, (_, channel) => buffer.getChannelData(channel).slice(start, end));
   return makeAudioBuffer(channels, buffer.sampleRate);
+}
+
+function renderAudioClips(clips: AudioClip[], buffers: AudioBuffer[]) {
+  const pieces = clips
+    .map((clip) => {
+      const buffer = buffers[clip.fileIndex];
+      return buffer ? cropAudioBuffer(buffer, clip.start, clip.end) : null;
+    })
+    .filter((buffer): buffer is AudioBuffer => Boolean(buffer));
+
+  return pieces.length ? mergeAudioBuffers(pieces) : buffers[0];
+}
+
+function drawWaveform(canvas: HTMLCanvasElement | null, buffer: AudioBuffer | undefined, startSeconds: number, endSeconds: number) {
+  if (!canvas) return;
+  const context = canvas.getContext("2d");
+  if (!context) return;
+
+  const width = canvas.width;
+  const height = canvas.height;
+  context.clearRect(0, 0, width, height);
+  context.fillStyle = "#f7faf9";
+  context.fillRect(0, 0, width, height);
+  context.strokeStyle = "#d8e3e8";
+  context.beginPath();
+  context.moveTo(0, height / 2);
+  context.lineTo(width, height / 2);
+  context.stroke();
+
+  if (!buffer) return;
+
+  const data = buffer.getChannelData(0);
+  const step = Math.max(1, Math.floor(data.length / width));
+  context.strokeStyle = "#0f766e";
+  context.lineWidth = 1.5;
+  context.beginPath();
+
+  for (let x = 0; x < width; x += 1) {
+    let min = 1;
+    let max = -1;
+    const offset = x * step;
+    for (let index = 0; index < step && offset + index < data.length; index += 1) {
+      const value = data[offset + index];
+      min = Math.min(min, value);
+      max = Math.max(max, value);
+    }
+    context.moveTo(x, ((1 + min) * height) / 2);
+    context.lineTo(x, ((1 + max) * height) / 2);
+  }
+  context.stroke();
+
+  const startX = Math.max(0, Math.min(width, (startSeconds / buffer.duration) * width));
+  const endX = Math.max(startX, Math.min(width, (endSeconds / buffer.duration) * width));
+  context.fillStyle = "rgba(15, 118, 110, 0.16)";
+  context.fillRect(startX, 0, endX - startX, height);
+  context.strokeStyle = "#c2410c";
+  context.lineWidth = 2;
+  context.beginPath();
+  context.moveTo(startX, 0);
+  context.lineTo(startX, height);
+  context.moveTo(endX, 0);
+  context.lineTo(endX, height);
+  context.stroke();
 }
 
 function mergeAudioBuffers(buffers: AudioBuffer[]) {
