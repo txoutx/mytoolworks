@@ -114,6 +114,7 @@ const videoText = {
     output: "Output",
     preview: "Preview",
     selectedClip: "Clip seleccionado",
+    previewTrim: "Recorte en preview",
     sendTimeline: "Enviar al timeline",
     trimAdd: "Recortar y anadir",
     clearTimeline: "Limpiar timeline",
@@ -134,7 +135,7 @@ const videoText = {
     playClip: "Reproducir clip",
     playTimeline: "Reproducir timeline",
     cutPoint: "Punto de corte",
-    splitClip: "Cortar clip",
+    splitClip: "Cortar y separar",
     exportSelection: "Exportar seleccion",
     exportTimeline: "Exportar timeline",
     captureFrame: "Capturar frame",
@@ -157,6 +158,7 @@ const videoText = {
     output: "Output",
     preview: "Preview",
     selectedClip: "Selected clip",
+    previewTrim: "Preview trim",
     sendTimeline: "Send to timeline",
     trimAdd: "Trim and add",
     clearTimeline: "Clear timeline",
@@ -177,7 +179,7 @@ const videoText = {
     playClip: "Play clip",
     playTimeline: "Play timeline",
     cutPoint: "Cut point",
-    splitClip: "Split clip",
+    splitClip: "Cut and split",
     exportSelection: "Export selection",
     exportTimeline: "Export timeline",
     captureFrame: "Capture frame",
@@ -205,6 +207,8 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
   const [clips, setClips] = useState<VideoClip[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
+  const [playingClipId, setPlayingClipId] = useState<string | null>(null);
+  const [timelineProgressPct, setTimelineProgressPct] = useState(0);
   const [draggedFileIndex, setDraggedFileIndex] = useState<number | null>(null);
   const [draggedClipId, setDraggedClipId] = useState<string | null>(null);
   const [timelineCutPct, setTimelineCutPct] = useState(50);
@@ -310,6 +314,8 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
     const element = videoRef.current;
     if (!element || !activeDuration) return;
     playbackTokenRef.current += 1;
+    setPlayingClipId(null);
+    setTimelineProgressPct(0);
     if (stopTimerRef.current) window.clearInterval(stopTimerRef.current);
     element.pause();
     element.currentTime = startSeconds;
@@ -335,6 +341,8 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
     for (const clip of clips) {
       if (playbackTokenRef.current !== token) return;
       setSelectedClipId(clip.id);
+      setPlayingClipId(clip.id);
+      setTimelineProgressPct(0);
       setActiveIndex(clip.fileIndex);
       const duration = durations[clip.fileIndex] ?? 1;
       setStartPct(Math.max(0, Math.min(99, (clip.start / duration) * 100)));
@@ -350,8 +358,10 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
       element.volume = volume;
       element.muted = muted;
       await element.play();
-      await waitForVideoSegment(element, clip.end, token, playbackTokenRef);
+      await waitForVideoSegment(element, clip.start, clip.end, token, playbackTokenRef, setTimelineProgressPct);
     }
+    setPlayingClipId(null);
+    setTimelineProgressPct(0);
   }
 
   function moveClip(id: string, direction: -1 | 1) {
@@ -473,6 +483,12 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
             <div className={`video-preview-frame crop-${crop.replace(":", "-")}`}>
               <video ref={videoRef} src={urls[activeIndex]} controls playsInline preload="metadata" style={{ transform: `rotate(${rotation}deg) scale(${flipH ? -1 : 1}, ${flipV ? -1 : 1})` }} />
             </div>
+            <div className="video-preview-trim">
+              <strong>{t.previewTrim}</strong>
+              <label className="audio-range-label"><span>{t.start}: {formatDuration(startSeconds)}</span><input type="range" min="0" max="99" value={startPct} onChange={(event) => updateSelection(Number(event.target.value), endPct)} /></label>
+              <label className="audio-range-label"><span>{t.end}: {formatDuration(endSeconds)}</span><input type="range" min="1" max="100" value={endPct} onChange={(event) => updateSelection(startPct, Number(event.target.value))} /></label>
+              <button type="button" className="button secondary" onClick={addSelectionToTimeline}>{t.trimAdd}</button>
+            </div>
             <div className="video-playbar">
               <button type="button" className="small-action" onClick={playClip}>{t.playClip}</button>
               <button type="button" className="small-action" onClick={captureFrame}>{t.captureFrame}</button>
@@ -492,7 +508,7 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
             <div className={`video-timeline ${clips.length ? "" : "empty"}`} onDragOver={(event) => event.preventDefault()} onDrop={dropFileOnTimeline}>
               {clips.length ? clips.map((clip, index) => (
                 <article
-                  className={`video-clip ${clip.id === selectedClipId ? "active" : ""}`}
+                  className={`video-clip ${clip.id === selectedClipId ? "active" : ""} ${clip.id === playingClipId ? "playing" : ""}`}
                   draggable
                   onClick={() => selectClip(clip)}
                   onDragStart={() => setDraggedClipId(clip.id)}
@@ -502,6 +518,7 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
                 >
                   <strong>{index + 1}. {clip.label}</strong>
                   <span>{formatDuration(clip.start)} - {formatDuration(clip.end)}</span>
+                  {clip.id === playingClipId && <span className="video-clip-progress" style={{ width: `${timelineProgressPct}%` }} />}
                   {clip.id === selectedClipId && (
                     <div className="video-clip-cut" onClick={(event) => event.stopPropagation()}>
                       <label>
@@ -522,10 +539,8 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
           </section>
 
           <section className="video-panel">
-            <h2>{selectedClipId ? t.selectedClip : t.preview}</h2>
-            <label className="audio-range-label"><span>{t.start}: {formatDuration(startSeconds)}</span><input type="range" min="0" max="99" value={startPct} onChange={(event) => updateSelection(Number(event.target.value), endPct)} /></label>
-            <label className="audio-range-label"><span>{t.end}: {formatDuration(endSeconds)}</span><input type="range" min="1" max="100" value={endPct} onChange={(event) => updateSelection(startPct, Number(event.target.value))} /></label>
-            <button type="button" className="button secondary" onClick={addSelectionToTimeline}>{t.trimAdd}</button>
+            <h2>{selectedClipId ? t.selectedClip : t.timeline}</h2>
+            <p className="option-note">{locale === "en" ? "Select a timeline clip, choose the cut point inside it and split it into separate clips. Preview trim lives in the video preview." : "Selecciona un clip del timeline, elige el punto de corte dentro del clip y separalo en clips independientes. El inicio y final se ajustan en la preview."}</p>
             <label className="audio-range-label"><span>{t.speed}: {speed.toFixed(2)}x</span><input type="range" min="0.5" max="2" step="0.05" value={speed} onChange={(event) => setSpeed(Number(event.target.value))} /></label>
             <label className="audio-range-label"><span>{t.volume}: {Math.round(volume * 100)}%</span><input type="range" min="0" max="1" step="0.05" value={volume} onChange={(event) => setVolume(Number(event.target.value))} /></label>
             <label className="audio-check"><input type="checkbox" checked={muted} onChange={(event) => setMuted(event.target.checked)} /> {t.mute}</label>
@@ -661,11 +676,21 @@ function waitForVideoMetadata(video: HTMLVideoElement) {
   });
 }
 
-function waitForVideoSegment(video: HTMLVideoElement, endSeconds: number, token: number, tokenRef: { current: number }) {
+function waitForVideoSegment(
+  video: HTMLVideoElement,
+  startSeconds: number,
+  endSeconds: number,
+  token: number,
+  tokenRef: { current: number },
+  onProgress: (progress: number) => void
+) {
   return new Promise<void>((resolve) => {
     function tick() {
+      const duration = Math.max(0.05, endSeconds - startSeconds);
+      onProgress(Math.max(0, Math.min(100, ((video.currentTime - startSeconds) / duration) * 100)));
       if (tokenRef.current !== token || video.currentTime >= endSeconds || video.ended) {
         video.pause();
+        onProgress(100);
         resolve();
         return;
       }

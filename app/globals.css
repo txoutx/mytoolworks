@@ -1582,6 +1582,20 @@ h1 {
   gap: 10px;
 }
 
+.video-preview-trim {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #dfe6eb;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+}
+
+.video-preview-trim strong {
+  color: #334650;
+  font-size: 13px;
+}
+
 .video-timeline-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1610,6 +1624,7 @@ h1 {
 }
 
 .video-clip {
+  position: relative;
   display: grid;
   align-content: space-between;
   gap: 10px;
@@ -1620,12 +1635,18 @@ h1 {
   background: linear-gradient(180deg, #ffffff, #edf4ff);
   padding: 10px;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .video-clip.active {
   flex-basis: 320px;
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.video-clip.playing {
+  border-color: #0f766e;
+  background: linear-gradient(180deg, #ffffff, #edf9f6);
 }
 
 .video-clip strong,
@@ -1645,6 +1666,17 @@ h1 {
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
+}
+
+.video-clip-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: block;
+  height: 4px;
+  background: var(--brand);
+  border-radius: 0 999px 999px 0;
+  transition: width 80ms linear;
 }
 
 .video-clip-cut {
