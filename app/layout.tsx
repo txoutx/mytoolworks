@@ -36,7 +36,22 @@ export const metadata: Metadata = {
     url: "https://mytoolworks.com",
     siteName: "MyToolWorks",
     locale: "es_ES",
-    type: "website"
+    type: "website",
+    images: [
+      {
+        url: "/favicon-192x192.png",
+        width: 192,
+        height: 192,
+        alt: "MyToolWorks"
+      }
+    ]
+  },
+  twitter: {
+    card: "summary",
+    title: "MyToolWorks - Herramientas online utiles",
+    description:
+      "Herramientas online gratis para PDF, imagen, audio, video y conversores. Edita, convierte y descarga archivos desde el navegador.",
+    images: ["/favicon-192x192.png"]
   }
 };
 

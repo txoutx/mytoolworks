@@ -18,6 +18,7 @@ export function Header({ locale = "es" }: { locale?: Locale }) {
           <Link href={withLocalePath("/audio", locale)}>{t.navAudio}</Link>
           <Link href={withLocalePath("/video", locale)}>{t.navVideo}</Link>
           <Link href={withLocalePath("/conversor", locale)}>{t.navConverter}</Link>
+          <Link href={withLocalePath("/blog", locale)}>Blog</Link>
         </div>
       </nav>
     </header>
@@ -36,6 +37,8 @@ export function Footer({ locale = "es" }: { locale?: Locale }) {
           <Link href={withLocalePath("/cookies", locale)}>{t.cookies}</Link>
           <Link href={withLocalePath("/terminos", locale)}>{t.terms}</Link>
           <Link href={withLocalePath("/contacto", locale)}>{t.contact}</Link>
+          <Link href={withLocalePath("/blog", locale)}>Blog</Link>
+          <Link href={locale === "en" ? "/en/use-cases" : "/casos"}>{locale === "en" ? "Use cases" : "Casos de uso"}</Link>
         </nav>
       </div>
     </footer>

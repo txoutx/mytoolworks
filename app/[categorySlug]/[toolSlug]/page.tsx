@@ -7,6 +7,8 @@ import type { Tool } from "../../data/tools";
 import { categories, getCategory, getRelatedTools, getTool, tools } from "../../data/tools";
 import type { Locale } from "../../../lib/i18n";
 import { localizeCategory, localizeTool, ui, withLocalePath } from "../../../lib/i18n";
+import { getSeoLinksForTool } from "../../../lib/seo/internalLinks";
+import { faqSchema } from "../../../lib/seo/schema";
 
 type PageProps = {
   params: Promise<{ categorySlug: string; toolSlug: string }>;
@@ -60,6 +62,7 @@ function ToolPageContent({ tool: sourceTool, locale }: { tool: Tool; locale: Loc
   const category = sourceCategory ? localizeCategory(sourceCategory, locale) : undefined;
   const related = getRelatedTools(sourceTool).map((item) => localizeTool(item, locale));
   const seoContent = getToolSeoContent(tool, locale);
+  const seoLinks = getSeoLinksForTool(sourceTool.slug, locale);
   const t = ui[locale];
   const jsonLd = {
     "@context": "https://schema.org",
@@ -75,6 +78,7 @@ function ToolPageContent({ tool: sourceTool, locale }: { tool: Tool; locale: Loc
       priceCurrency: "EUR"
     }
   };
+  const faqJsonLd = faqSchema(seoContent.faqs);
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -156,11 +160,32 @@ function ToolPageContent({ tool: sourceTool, locale }: { tool: Tool; locale: Loc
                 </a>
               ))}
             </div>
+            {seoLinks.articles.length > 0 && (
+              <div className="related-list">
+                <h2>{locale === "en" ? "Guides" : "Guias"}</h2>
+                {seoLinks.articles.map((item) => (
+                  <a href={item.href} key={item.href}>
+                    {item.title}
+                  </a>
+                ))}
+              </div>
+            )}
+            {seoLinks.cases.length > 0 && (
+              <div className="related-list">
+                <h2>{locale === "en" ? "Use cases" : "Casos de uso"}</h2>
+                {seoLinks.cases.map((item) => (
+                  <a href={item.href} key={item.href}>
+                    {item.title}
+                  </a>
+                ))}
+              </div>
+            )}
           </aside>
         </div>
       </main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      {faqJsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />}
       <Footer locale={locale} />
     </div>
   );

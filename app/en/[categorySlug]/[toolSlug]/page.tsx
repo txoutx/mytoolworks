@@ -4,6 +4,8 @@ import { AdSlot, Footer, Header } from "../../../components/SiteChrome";
 import { ToolRunner } from "../../../components/ToolRunner";
 import { getCategory, getRelatedTools, getTool, tools } from "../../../data/tools";
 import { localizeCategory, localizeTool, ui, withLocalePath } from "../../../../lib/i18n";
+import { getSeoLinksForTool } from "../../../../lib/seo/internalLinks";
+import { faqSchema } from "../../../../lib/seo/schema";
 
 type PageProps = {
   params: Promise<{ categorySlug: string; toolSlug: string }>;
@@ -51,7 +53,18 @@ export default async function EnglishToolPage({ params }: PageProps) {
   const sourceCategory = getCategory(tool.categorySlug);
   const category = sourceCategory ? localizeCategory(sourceCategory, "en") : undefined;
   const related = getRelatedTools(tool).map((item) => localizeTool(item, "en"));
+  const seoLinks = getSeoLinksForTool(tool.slug, "en");
   const t = ui.en;
+  const faqs = [
+    {
+      question: `Can I use ${localizedTool.title} for free?`,
+      answer: "Yes, the tool is designed for free online use in the browser."
+    },
+    {
+      question: "Does it work on mobile?",
+      answer: "Yes, the interface is responsive and works on mobile, tablet and desktop."
+    }
+  ];
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
@@ -66,6 +79,7 @@ export default async function EnglishToolPage({ params }: PageProps) {
       priceCurrency: "EUR"
     }
   };
+  const faqJsonLd = faqSchema(faqs);
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -133,11 +147,32 @@ export default async function EnglishToolPage({ params }: PageProps) {
                 </a>
               ))}
             </div>
+            {seoLinks.articles.length > 0 && (
+              <div className="related-list">
+                <h2>Guides</h2>
+                {seoLinks.articles.map((item) => (
+                  <a href={item.href} key={item.href}>
+                    {item.title}
+                  </a>
+                ))}
+              </div>
+            )}
+            {seoLinks.cases.length > 0 && (
+              <div className="related-list">
+                <h2>Use cases</h2>
+                {seoLinks.cases.map((item) => (
+                  <a href={item.href} key={item.href}>
+                    {item.title}
+                  </a>
+                ))}
+              </div>
+            )}
           </aside>
         </div>
       </main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      {faqJsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />}
       <Footer locale="en" />
     </div>
   );

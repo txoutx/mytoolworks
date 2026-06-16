@@ -2647,6 +2647,73 @@ h1 {
   font-weight: 750;
 }
 
+.seo-home-section {
+  padding-top: 18px;
+}
+
+.seo-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.seo-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 150px;
+  border: 1px solid #d4d9e3;
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 18px;
+  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.seo-card:hover {
+  border-color: #c1c8d4;
+  box-shadow: 0 16px 34px rgba(23, 32, 38, 0.09);
+  transform: translateY(-2px);
+}
+
+.seo-card h3 {
+  margin: 0;
+  color: #26333b;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.seo-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.seo-article {
+  display: grid;
+  gap: 22px;
+}
+
+.seo-article section {
+  display: grid;
+  gap: 8px;
+}
+
+.seo-article h2 {
+  margin-bottom: 0;
+}
+
+.seo-article p,
+.seo-article li {
+  color: #4c5b64;
+  line-height: 1.7;
+}
+
+.seo-article ul,
+.seo-article ol {
+  margin: 0;
+  padding-left: 22px;
+}
+
 .footer {
   padding: 34px 0;
   color: var(--muted);
@@ -2708,6 +2775,10 @@ h1 {
     grid-template-columns: 1fr;
   }
 
+  .seo-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .compact-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2759,6 +2830,10 @@ h1 {
   }
 
   .home-category-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .seo-card-grid {
     grid-template-columns: 1fr;
   }
 

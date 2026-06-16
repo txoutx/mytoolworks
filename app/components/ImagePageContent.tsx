@@ -1,7 +1,10 @@
 import type { Locale } from "../../lib/i18n";
-import { ui } from "../../lib/i18n";
+import { ui, withLocalePath } from "../../lib/i18n";
+import { getSeoLinksForCategory } from "../../lib/seo/internalLinks";
+import { breadcrumbSchema, faqSchema } from "../../lib/seo/schema";
 import { ImageTool } from "../img/ImageTool";
 import { AdSlot, Footer, Header } from "./SiteChrome";
+import { SeoCardGrid } from "./SeoPages";
 
 export function ImagePageContent({ locale }: { locale: Locale }) {
   const t = ui[locale];
@@ -45,6 +48,27 @@ export function ImagePageContent({ locale }: { locale: Locale }) {
           q4: "Puedo cambiar el tamano de una imagen?",
           a4: "Si, puedes modificar ancho, alto o escalar por porcentaje."
         };
+  const faqItems = [
+    { question: seo.q1, answer: seo.a1 },
+    { question: seo.q2, answer: seo.a2 },
+    { question: seo.q3, answer: seo.a3 },
+    { question: seo.q4, answer: seo.a4 }
+  ];
+  const seoLinks = getSeoLinksForCategory("img", locale);
+  const schemas = [
+    faqSchema(faqItems),
+    breadcrumbSchema([
+      { name: locale === "en" ? "Home" : "Inicio", href: withLocalePath("/", locale) },
+      { name: t.imageTitle, href: withLocalePath("/img", locale) }
+    ]),
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: t.imageTitle,
+      description: t.imageLead,
+      url: `https://mytoolworks.com${withLocalePath("/img", locale)}`
+    }
+  ].filter(Boolean);
   return (
     <div className="site-shell">
       <Header locale={locale} />
@@ -102,7 +126,21 @@ export function ImagePageContent({ locale }: { locale: Locale }) {
             </div>
           </div>
         </section>
+
+        {seoLinks.length > 0 && (
+          <section className="section seo-home-section">
+            <div className="container">
+              <div className="section-heading clean">
+                <h2>{locale === "en" ? "Related guides" : "Guias relacionadas"}</h2>
+              </div>
+              <SeoCardGrid links={seoLinks} />
+            </div>
+          </section>
+        )}
       </main>
+      {schemas.map((schema, index) => (
+        <script key={index} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      ))}
       <Footer locale={locale} />
     </div>
   );

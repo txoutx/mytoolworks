@@ -4,6 +4,9 @@ import { ToolCard } from "./ToolCard";
 import { getToolsByCategory, groupToolsByLabel } from "../data/tools";
 import type { Locale } from "../../lib/i18n";
 import { localizeTool, ui, withLocalePath } from "../../lib/i18n";
+import { getSeoLinksForCategory } from "../../lib/seo/internalLinks";
+import { breadcrumbSchema } from "../../lib/seo/schema";
+import { SeoCardGrid } from "./SeoPages";
 
 type CategoryListingProps = {
   slug: string;
@@ -44,6 +47,27 @@ export function CategoryListing({ slug, title, description, locale = "es" }: Cat
   const t = ui[locale];
   const categoryTools = getToolsByCategory(slug).map((tool) => localizeTool(tool, locale));
   const grouped = groupToolsByLabel(categoryTools);
+  const seoLinks = getSeoLinksForCategory(slug, locale);
+  const itemListJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: title,
+    description,
+    url: `https://mytoolworks.com${withLocalePath(`/${slug}`, locale)}`,
+    mainEntity: {
+      "@type": "ItemList",
+      itemListElement: categoryTools.map((tool, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        name: tool.title,
+        url: `https://mytoolworks.com${tool.route}`
+      }))
+    }
+  };
+  const breadcrumbJsonLd = breadcrumbSchema([
+    { name: locale === "en" ? "Home" : "Inicio", href: withLocalePath("/", locale) },
+    { name: title, href: withLocalePath(`/${slug}`, locale) }
+  ]);
 
   return (
     <div className="site-shell">
@@ -77,10 +101,22 @@ export function CategoryListing({ slug, title, description, locale = "es" }: Cat
             ))}
           </div>
         </section>
+        {seoLinks.length > 0 && (
+          <section className="section seo-home-section">
+            <div className="container">
+              <div className="section-heading clean">
+                <h2>{locale === "en" ? "Related guides" : "Guias relacionadas"}</h2>
+              </div>
+              <SeoCardGrid links={seoLinks} />
+            </div>
+          </section>
+        )}
         <div className="container bottom-ad">
           <AdSlot label={t.lowerAd} locale={locale} />
         </div>
       </main>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <Footer locale={locale} />
     </div>
   );

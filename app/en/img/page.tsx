@@ -16,7 +16,8 @@ export const metadata: Metadata = {
     title: "Images",
     description: "Edit, compress, resize, convert, rotate and download images online from your browser.",
     url: "https://mytoolworks.com/en/img",
-    type: "website"
+    type: "website",
+    images: ["/favicon-192x192.png"]
   }
 };
 
