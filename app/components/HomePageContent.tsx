@@ -6,6 +6,19 @@ import { AdSlot, Footer, Header } from "./SiteChrome";
 
 export function HomePageContent({ locale }: { locale: Locale }) {
   const t = ui[locale];
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "MyToolWorks",
+    url: "https://mytoolworks.com/",
+    description: t.homeLead,
+    publisher: {
+      "@type": "Organization",
+      name: "MyToolWorks",
+      url: "https://mytoolworks.com/",
+      logo: "https://mytoolworks.com/favicon-192x192.png"
+    }
+  };
   return (
     <div className="site-shell">
       <Header locale={locale} />
@@ -29,7 +42,7 @@ export function HomePageContent({ locale }: { locale: Locale }) {
                 <div className="home-category-icon" aria-hidden="true">
                   <FileText size={28} />
                 </div>
-                <h2>PDF Tools</h2>
+                <h2>PDF</h2>
                 <p>{t.homePdfDescription}</p>
                 <div className="category-preview-list">
                   <span>{locale === "en" ? "Merge PDF" : "Unir PDF"}</span>
@@ -51,20 +64,6 @@ export function HomePageContent({ locale }: { locale: Locale }) {
                   <span>{locale === "en" ? "Watermark" : "Marca de agua"}</span>
                 </div>
                 <footer>{t.openImage}</footer>
-              </Link>
-
-              <Link href={withLocalePath("/conversor", locale)} className="home-category-card">
-                <div className="home-category-icon" aria-hidden="true">
-                  <ArrowLeftRight size={28} />
-                </div>
-                <h2>{t.homeConverterTitle}</h2>
-                <p>{t.homeConverterDescription}</p>
-                <div className="category-preview-list">
-                  <span>{locale === "en" ? "Currency" : "Divisa"}</span>
-                  <span>{locale === "en" ? "Length" : "Longitud"}</span>
-                  <span>{locale === "en" ? "Temperature" : "Temperatura"}</span>
-                </div>
-                <footer>{t.openConverter}</footer>
               </Link>
 
               <Link href={withLocalePath("/audio", locale)} className="home-category-card">
@@ -94,6 +93,20 @@ export function HomePageContent({ locale }: { locale: Locale }) {
                 </div>
                 <footer>{t.openVideo}</footer>
               </Link>
+
+              <Link href={withLocalePath("/conversor", locale)} className="home-category-card">
+                <div className="home-category-icon" aria-hidden="true">
+                  <ArrowLeftRight size={28} />
+                </div>
+                <h2>{t.homeConverterTitle}</h2>
+                <p>{t.homeConverterDescription}</p>
+                <div className="category-preview-list">
+                  <span>{locale === "en" ? "Currency" : "Divisa"}</span>
+                  <span>{locale === "en" ? "Length" : "Longitud"}</span>
+                  <span>{locale === "en" ? "Temperature" : "Temperatura"}</span>
+                </div>
+                <footer>{t.openConverter}</footer>
+              </Link>
             </div>
           </div>
         </section>
@@ -102,6 +115,7 @@ export function HomePageContent({ locale }: { locale: Locale }) {
           <AdSlot label={t.lowerAd} locale={locale} />
         </div>
       </main>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Footer locale={locale} />
     </div>
   );

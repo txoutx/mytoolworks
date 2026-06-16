@@ -46,38 +46,38 @@ export type Tool = {
 export const categories: ToolCategory[] = [
   {
     slug: "pdf",
-    title: "Herramientas PDF",
+    title: "PDF",
     shortTitle: "PDF",
     navLabel: "PDF",
     description: "Unir, dividir, comprimir, rotar, ordenar, convertir y firmar PDF."
   },
   {
     slug: "img",
-    title: "Herramientas de imagen",
+    title: "Imagen",
     shortTitle: "Imagen",
     navLabel: "Imagen",
     description: "Edita, comprime, convierte, redimensiona y descarga imagenes desde el navegador."
   },
   {
-    slug: "conversor",
-    title: "Conversores online",
-    shortTitle: "Conversores",
-    navLabel: "Conversores",
-    description: "Convierte divisas, unidades, horas, zonas horarias, temperatura, peso, datos digitales, area, volumen y energia."
-  },
-  {
     slug: "audio",
-    title: "Herramientas de audio",
+    title: "Audio",
     shortTitle: "Audio",
     navLabel: "Audio",
     description: "Corta, une, convierte, comprime, mejora y ajusta archivos de audio desde el navegador."
   },
   {
     slug: "video",
-    title: "Herramientas de video",
+    title: "Video",
     shortTitle: "Video",
     navLabel: "Video",
     description: "Corta, une, recorta, ajusta y exporta videos con un editor visual tipo timeline."
+  },
+  {
+    slug: "conversor",
+    title: "Conversores",
+    shortTitle: "Conversores",
+    navLabel: "Conversores",
+    description: "Convierte divisas, unidades, horas, zonas horarias, temperatura, peso, datos digitales, area, volumen y energia."
   }
 ];
 
@@ -429,8 +429,8 @@ export const tools: Tool[] = [
     title: "Editor de video",
     h1: "Editor de video online",
     group: "Edicion",
-    description: "Edita videos con timeline visual: corta, une, reordena clips, recorta formato, ajusta velocidad, volumen, rotacion, flip, captura frames y exporta WebM.",
-    keywords: ["editor de video", "cortar video", "unir videos", "video timeline", "recortar video", "convertir video a gif", "capturar frame video"]
+    description: "Edita videos con timeline visual: corta, divide, une, reordena clips, recorta formato, ajusta velocidad, volumen, rotacion, flip, captura frames y exporta WebM o MP4 compatible.",
+    keywords: ["editor de video", "cortar video", "dividir video", "unir videos", "timeline video", "recortar video", "exportar webm", "exportar mp4", "capturar frame video"]
   }
 ];
 

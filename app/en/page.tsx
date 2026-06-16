@@ -3,13 +3,13 @@ import { HomePageContent } from "../components/HomePageContent";
 
 export const metadata: Metadata = {
   title: "MyToolWorks - Useful online tools",
-  description: "Fast online tools for PDF files, images and documents.",
+  description: "Free online tools for PDF, images, audio, video and converters. Edit, convert and download files in your browser.",
   alternates: {
     canonical: "/en"
   },
   openGraph: {
     title: "MyToolWorks",
-    description: "Fast online tools for PDF files, images and documents.",
+    description: "Free online tools for PDF, images, audio, video and converters. Edit, convert and download files in your browser.",
     url: "https://mytoolworks.com/en",
     type: "website"
   }

@@ -13,11 +13,23 @@ type CategoryListingProps = {
 };
 
 export function categoryMetadata(title: string, description: string, slug: string, locale: Locale = "es"): Metadata {
+  const keywordMap: Record<string, string[]> = {
+    pdf: locale === "en" ? ["pdf tools", "merge pdf", "compress pdf", "split pdf", "sign pdf"] : ["herramientas pdf", "unir pdf", "comprimir pdf", "dividir pdf", "firmar pdf"],
+    img: locale === "en" ? ["image tools", "resize image", "compress image", "convert image"] : ["herramientas imagen", "editar imagen", "comprimir imagen", "convertir imagen"],
+    audio: locale === "en" ? ["audio editor", "cut audio", "merge audio", "convert audio"] : ["editor de audio", "cortar audio", "unir audio", "convertir audio"],
+    video: locale === "en" ? ["video editor", "cut video", "merge video", "video timeline"] : ["editor de video", "cortar video", "unir video", "timeline video"],
+    conversor: locale === "en" ? ["online converters", "unit converter", "currency converter"] : ["conversores online", "conversor unidades", "conversor divisa"]
+  };
   return {
     title,
     description,
+    keywords: keywordMap[slug],
     alternates: {
-      canonical: withLocalePath(`/${slug}`, locale)
+      canonical: withLocalePath(`/${slug}`, locale),
+      languages: {
+        es: `/${slug}`,
+        en: `/en/${slug}`
+      }
     },
     openGraph: {
       title: `${title} online`,

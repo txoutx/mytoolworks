@@ -1,9 +1,9 @@
 import { CategoryListing, categoryMetadata } from "../components/CategoryListing";
 
-const description = "Todas las herramientas PDF agrupadas para convertir, editar, organizar y proteger documentos.";
+const description = "Herramientas PDF online para unir, dividir, comprimir, rotar, ordenar, convertir a imagen y firmar documentos.";
 
-export const metadata = categoryMetadata("Herramientas PDF", description, "pdf");
+export const metadata = categoryMetadata("PDF", description, "pdf");
 
 export default function PdfPage() {
-  return <CategoryListing slug="pdf" title="Herramientas PDF" description={description} locale="es" />;
+  return <CategoryListing slug="pdf" title="PDF" description={description} locale="es" />;
 }

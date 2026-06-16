@@ -10,26 +10,29 @@ export const metadata: Metadata = {
     template: "%s | MyToolWorks"
   },
   description:
-    "Herramientas online rapidas para PDF, calculadoras, conversores, textos, CV y documentos.",
+    "Herramientas online gratis para PDF, imagen, audio, video y conversores. Edita, convierte y descarga archivos desde el navegador.",
   applicationName: "MyToolWorks",
   icons: {
     icon: [
-      { url: "/favicon-mtw-2026.png", sizes: "192x192", type: "image/png" },
       { url: "/favicon.ico", type: "image/x-icon" },
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
       { url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
-      { url: "/favicon-192x192.png", sizes: "192x192", type: "image/png" }
+      { url: "/favicon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" }
     ],
     shortcut: "/favicon.ico",
     apple: "/apple-touch-icon.png"
   },
   alternates: {
-    canonical: "/"
+    canonical: "/",
+    languages: {
+      es: "/",
+      en: "/en"
+    }
   },
   openGraph: {
-    title: "MyToolWorks",
+    title: "MyToolWorks - Herramientas online utiles",
     description:
-      "Herramientas online rapidas para PDF, calculadoras, conversores, textos, CV y documentos.",
+      "Herramientas online gratis para PDF, imagen, audio, video y conversores. Edita, convierte y descarga archivos desde el navegador.",
     url: "https://mytoolworks.com",
     siteName: "MyToolWorks",
     locale: "es_ES",

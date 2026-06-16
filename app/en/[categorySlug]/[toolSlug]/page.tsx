@@ -27,7 +27,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description: tool.description,
     keywords: tool.keywords,
     alternates: {
-      canonical: tool.route
+      canonical: tool.route,
+      languages: {
+        es: sourceTool.route,
+        en: tool.route
+      }
     },
     openGraph: {
       title: tool.h1,

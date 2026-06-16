@@ -2,13 +2,18 @@ import type { Metadata } from "next";
 import { ImagePageContent } from "../components/ImagePageContent";
 
 export const metadata: Metadata = {
-  title: "Herramientas de imagen online",
+  title: "Imagen",
   description: "Edita, comprime, redimensiona, convierte, rota y descarga imagenes online desde el navegador.",
+  keywords: ["herramientas imagen", "editar imagen online", "comprimir imagen", "convertir imagen", "redimensionar imagen"],
   alternates: {
-    canonical: "/img"
+    canonical: "/img",
+    languages: {
+      es: "/img",
+      en: "/en/img"
+    }
   },
   openGraph: {
-    title: "Herramientas de imagen online",
+    title: "Imagen",
     description: "Edita, comprime, redimensiona, convierte, rota y descarga imagenes online desde el navegador.",
     url: "https://mytoolworks.com/img",
     type: "website"

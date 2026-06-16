@@ -35,7 +35,7 @@ export const ui = {
     sideAd: "Anuncio lateral",
     related: "Relacionadas",
     homeEyebrow: "Herramientas online",
-    homeLead: "Elige una categoria y trabaja con PDFs, imagenes, audio, video o conversores directamente desde el navegador.",
+    homeLead: "Herramientas online gratis para PDF, imagen, audio, video y conversores. Trabaja directamente desde el navegador.",
     homePdfDescription: "Une, divide, comprime, rota, ordena, convierte a imagen y firma archivos PDF.",
     homeImageTitle: "Imagen",
     homeImageDescription: "Edita imagenes, crea collages, cambia el lienzo, convierte formatos y descarga el resultado.",
@@ -51,8 +51,8 @@ export const ui = {
     openAudio: "Abrir audio",
     openVideo: "Abrir video",
     imageEyebrow: "Imagen",
-    imageTitle: "Herramientas de imagen online",
-    imageLead: "Edita, combina, comprime, convierte, redimensiona y descarga imagenes directamente desde el navegador."
+    imageTitle: "Imagen",
+    imageLead: "Edita, comprime, redimensiona, convierte, rota y descarga imagenes online desde el navegador."
   },
   en: {
     navPdf: "PDF",
@@ -74,7 +74,7 @@ export const ui = {
     sideAd: "Side ad",
     related: "Related tools",
     homeEyebrow: "Online tools",
-    homeLead: "Choose a category and work with PDFs, images, audio, video or converters directly in your browser.",
+    homeLead: "Free online tools for PDF, images, audio, video and converters. Work directly in your browser.",
     homePdfDescription: "Merge, split, compress, rotate, reorder, convert to images and sign PDF files.",
     homeImageTitle: "Images",
     homeImageDescription: "Edit images, create collages, change the canvas, convert formats and download the result.",
@@ -90,8 +90,8 @@ export const ui = {
     openAudio: "Open audio",
     openVideo: "Open video",
     imageEyebrow: "Images",
-    imageTitle: "Online image tools",
-    imageLead: "Edit, combine, compress, convert, resize and download images directly from your browser."
+    imageTitle: "Images",
+    imageLead: "Edit, compress, resize, convert, rotate and download images online from your browser."
   }
 } as const;
 
@@ -99,31 +99,31 @@ const categoryTranslations: Record<Locale, Record<string, Partial<ToolCategory>>
   es: {},
   en: {
     pdf: {
-      title: "PDF Tools",
+      title: "PDF",
       shortTitle: "PDF",
       navLabel: "PDF",
       description: "Merge, split, compress, rotate, reorder, convert and sign PDF files."
     },
     img: {
-      title: "Image tools",
+      title: "Images",
       shortTitle: "Images",
       navLabel: "Images",
       description: "Edit, compress, convert, resize and download images from your browser."
     },
     conversor: {
-      title: "Online converters",
+      title: "Converters",
       shortTitle: "Converters",
       navLabel: "Converters",
       description: "Convert currencies, units, time zones, temperature, weight, digital data, area, volume and energy."
     },
     audio: {
-      title: "Audio tools",
+      title: "Audio",
       shortTitle: "Audio",
       navLabel: "Audio",
       description: "Cut, merge, convert, compress, enhance and adjust audio files from your browser."
     },
     video: {
-      title: "Video tools",
+      title: "Video",
       shortTitle: "Video",
       navLabel: "Video",
       description: "Cut, merge, crop, adjust and export videos with a visual timeline."
@@ -294,7 +294,8 @@ const toolTranslations: Record<Locale, Record<string, Partial<Tool>>> = {
       title: "Video editor",
       h1: "Online video editor",
       group: "Editing",
-      description: "Edit videos with a visual timeline: cut, merge, reorder clips, crop formats, adjust speed, volume, rotation, flip, capture frames and export WebM."
+      description: "Edit videos with a visual timeline: cut, split, merge, reorder clips, crop formats, adjust speed, volume, rotation, flip, capture frames and export WebM or compatible MP4.",
+      keywords: ["video editor", "cut video", "split video", "merge videos", "video timeline", "crop video", "export webm", "export mp4", "capture video frame"]
     }
   }
 };
