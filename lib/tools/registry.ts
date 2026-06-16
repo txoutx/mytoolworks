@@ -426,11 +426,71 @@ export const tools: Tool[] = [
     ...videoBase,
     slug: "editor-video",
     route: "/video/editor-video",
-    title: "Editor de video",
-    h1: "Editor de video online",
+    title: "Video Studio",
+    h1: "Video Studio online",
+    group: "Todo en uno",
+    description: "Edita videos con modos simples para comprimir, convertir, cortar, unir, redimensionar, cambiar velocidad, capturar frames y exportar WebM o MP4 compatible.",
+    keywords: ["editor de video online", "video studio", "comprimir video", "convertir video", "cortar video", "unir videos", "redimensionar video", "exportar mp4"]
+  },
+  {
+    ...videoBase,
+    slug: "comprimir-video",
+    route: "/video/comprimir-video",
+    title: "Comprimir video",
+    h1: "Comprimir video online",
+    group: "Compresion",
+    description: "Reduce el tamano de videos MP4, MOV o WebM ajustando calidad, resolucion y compresion desde el navegador.",
+    keywords: ["comprimir video", "compress video", "comprimir mp4", "reducir video", "video para whatsapp", "video para email"]
+  },
+  {
+    ...videoBase,
+    slug: "convertidor-video",
+    route: "/video/convertidor-video",
+    title: "Convertidor de video",
+    h1: "Convertidor de video online",
+    group: "Conversion",
+    description: "Convierte videos entre formatos compatibles del navegador, con salida WebM o MP4 cuando el navegador lo soporte.",
+    keywords: ["convertidor video", "convertir video", "mp4 converter", "mov a mp4", "webm a mp4", "mp4 a webm"]
+  },
+  {
+    ...videoBase,
+    slug: "cortar-video",
+    route: "/video/cortar-video",
+    title: "Cortar video",
+    h1: "Cortar video online",
     group: "Edicion",
-    description: "Edita videos con timeline visual: corta, divide, une, reordena clips, recorta formato, ajusta velocidad, volumen, rotacion, flip, captura frames y exporta WebM o MP4 compatible.",
-    keywords: ["editor de video", "cortar video", "dividir video", "unir videos", "timeline video", "recortar video", "exportar webm", "exportar mp4", "capturar frame video"]
+    description: "Recorta el inicio y final de un video, divide clips desde el timeline y exporta solo la parte seleccionada.",
+    keywords: ["cortar video", "trim video", "recortar video", "dividir video", "split video"]
+  },
+  {
+    ...videoBase,
+    slug: "redimensionar-video",
+    route: "/video/redimensionar-video",
+    title: "Redimensionar video",
+    h1: "Redimensionar video online",
+    group: "Formato",
+    description: "Cambia el formato y resolucion de un video para 16:9, 9:16, 1:1, 720p o 1080p.",
+    keywords: ["redimensionar video", "resize video", "crop video", "video 9:16", "video 1:1", "video para tiktok", "video para instagram"]
+  },
+  {
+    ...videoBase,
+    slug: "cambiar-velocidad-video",
+    route: "/video/cambiar-velocidad-video",
+    title: "Cambiar velocidad de video",
+    h1: "Cambiar velocidad de video online",
+    group: "Edicion",
+    description: "Acelera o ralentiza videos entre 0.5x y 2x y exporta el resultado desde el navegador.",
+    keywords: ["cambiar velocidad video", "speed up video", "slow motion video", "acelerar video", "ralentizar video"]
+  },
+  {
+    ...videoBase,
+    slug: "unir-videos",
+    route: "/video/unir-videos",
+    title: "Unir videos",
+    h1: "Unir videos online",
+    group: "Edicion",
+    description: "Sube varios videos, ordenalos en el timeline y exportalos como un unico archivo.",
+    keywords: ["unir videos", "merge videos", "juntar videos", "combinar videos", "timeline video"]
   }
 ];
 

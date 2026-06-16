@@ -1464,6 +1464,42 @@ h1 {
   gap: 18px;
 }
 
+.video-mode-panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr);
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fbfcfd;
+  padding: 14px;
+}
+
+.video-mode-panel h2 {
+  margin: 0 0 6px;
+  color: #26333b;
+  font-size: 18px;
+}
+
+.video-mode-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.video-mode-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.video-mode-grid .small-action.active {
+  border-color: var(--blue);
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
 .audio-dropzone {
   min-height: 160px;
   margin-top: 0;
@@ -2661,7 +2697,8 @@ h1 {
   .converter-main,
   .world-clock-controls,
   .audio-grid,
-  .video-editor-grid {
+  .video-editor-grid,
+  .video-mode-panel {
     grid-template-columns: 1fr;
   }
 

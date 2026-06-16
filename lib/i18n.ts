@@ -291,11 +291,53 @@ const toolTranslations: Record<Locale, Record<string, Partial<Tool>>> = {
       description: "Convert audio to WAV, adjust sample rate, normalize volume, compress dynamics, convert stereo to mono, split channels and reduce basic noise."
     },
     "editor-video": {
-      title: "Video editor",
-      h1: "Online video editor",
+      title: "Video Studio",
+      h1: "Online Video Studio",
+      group: "All in one",
+      description: "Edit videos with simple modes to compress, convert, trim, merge, resize, change speed, capture frames and export WebM or compatible MP4.",
+      keywords: ["online video editor", "video studio", "compress video", "convert video", "cut video", "merge videos", "resize video", "export mp4"]
+    },
+    "comprimir-video": {
+      title: "Compress video",
+      h1: "Compress video online",
+      group: "Compression",
+      description: "Reduce MP4, MOV or WebM video size by adjusting quality, resolution and compression in your browser.",
+      keywords: ["compress video", "compress mp4", "reduce video size", "video for whatsapp", "video for email"]
+    },
+    "convertidor-video": {
+      title: "Video converter",
+      h1: "Online video converter",
+      group: "Conversion",
+      description: "Convert videos between browser-compatible formats, with WebM or MP4 output when supported.",
+      keywords: ["video converter", "convert video", "mp4 converter", "mov to mp4", "webm to mp4", "mp4 to webm"]
+    },
+    "cortar-video": {
+      title: "Cut video",
+      h1: "Cut video online",
       group: "Editing",
-      description: "Edit videos with a visual timeline: cut, split, merge, reorder clips, crop formats, adjust speed, volume, rotation, flip, capture frames and export WebM or compatible MP4.",
-      keywords: ["video editor", "cut video", "split video", "merge videos", "video timeline", "crop video", "export webm", "export mp4", "capture video frame"]
+      description: "Trim the start and end of a video, split clips from the timeline and export only the selected part.",
+      keywords: ["cut video", "trim video", "split video", "crop video"]
+    },
+    "redimensionar-video": {
+      title: "Resize video",
+      h1: "Resize video online",
+      group: "Format",
+      description: "Change video format and resolution for 16:9, 9:16, 1:1, 720p or 1080p.",
+      keywords: ["resize video", "crop video", "video 9:16", "video 1:1", "video for tiktok", "video for instagram"]
+    },
+    "cambiar-velocidad-video": {
+      title: "Change video speed",
+      h1: "Change video speed online",
+      group: "Editing",
+      description: "Speed up or slow down videos between 0.5x and 2x and export the result from your browser.",
+      keywords: ["change video speed", "speed up video", "slow motion video", "slow down video"]
+    },
+    "unir-videos": {
+      title: "Merge videos",
+      h1: "Merge videos online",
+      group: "Editing",
+      description: "Upload several videos, order them on the timeline and export them as one file.",
+      keywords: ["merge videos", "join videos", "combine videos", "video timeline"]
     }
   }
 };

@@ -47,6 +47,7 @@ type VideoClip = {
 };
 
 type VideoExportFormat = "webm-vp9" | "webm-vp8" | "mp4";
+type VideoMode = "studio" | "compress" | "convert" | "trim" | "resize" | "speed" | "merge";
 
 const formatEuro = new Intl.NumberFormat("es-ES", {
   style: "currency",
@@ -108,6 +109,25 @@ export function ToolRunner({ tool, locale = "es" }: RunnerProps) {
 
 const videoText = {
   es: {
+    modeLabel: "Modo de trabajo",
+    modes: {
+      studio: "Studio",
+      compress: "Comprimir",
+      convert: "Convertir",
+      trim: "Cortar",
+      resize: "Redimensionar",
+      speed: "Velocidad",
+      merge: "Unir"
+    },
+    modeDescriptions: {
+      studio: "Usa todos los controles disponibles para editar, cortar, unir, redimensionar y exportar.",
+      compress: "Reduce peso bajando resolucion, bitrate y fps. Ideal para email, WhatsApp o subir archivos mas rapido.",
+      convert: "Elige formato de salida WebM o MP4 compatible y exporta el video desde el navegador.",
+      trim: "Marca Input/Output en la preview o divide clips desde el timeline.",
+      resize: "Cambia ratio y resolucion para redes: 16:9, 9:16, 1:1, 720p o 1080p.",
+      speed: "Acelera o ralentiza el video entre 0.5x y 2x.",
+      merge: "Sube varios videos, envialos al timeline, reordenalos y exporta el montaje completo."
+    },
     addFiles: "Anadir videos",
     selectFiles: "Seleccionar videos",
     supported: "MP4, MOV y WebM. La exportacion en navegador usa WebM; MP4 real requiere backend con ffmpeg.",
@@ -156,6 +176,25 @@ const videoText = {
     remove: "Quitar"
   },
   en: {
+    modeLabel: "Working mode",
+    modes: {
+      studio: "Studio",
+      compress: "Compress",
+      convert: "Convert",
+      trim: "Cut",
+      resize: "Resize",
+      speed: "Speed",
+      merge: "Merge"
+    },
+    modeDescriptions: {
+      studio: "Use all available controls to edit, cut, merge, resize and export.",
+      compress: "Reduce size by lowering resolution, bitrate and fps. Good for email, WhatsApp or faster uploads.",
+      convert: "Choose WebM or compatible MP4 output and export the video in your browser.",
+      trim: "Set Input/Output in the preview or split clips from the timeline.",
+      resize: "Change ratio and resolution for social platforms: 16:9, 9:16, 1:1, 720p or 1080p.",
+      speed: "Speed up or slow down the video between 0.5x and 2x.",
+      merge: "Upload several videos, send them to the timeline, reorder them and export the full edit."
+    },
     addFiles: "Add videos",
     selectFiles: "Select videos",
     supported: "MP4, MOV and WebM. Browser export uses WebM; real MP4 requires a backend with ffmpeg.",
@@ -205,7 +244,19 @@ const videoText = {
   }
 } as const;
 
-function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
+const videoModeBySlug: Record<string, VideoMode> = {
+  "editor-video": "studio",
+  "comprimir-video": "compress",
+  "convertidor-video": "convert",
+  "cortar-video": "trim",
+  "redimensionar-video": "resize",
+  "cambiar-velocidad-video": "speed",
+  "unir-videos": "merge"
+};
+
+const videoModes: VideoMode[] = ["compress", "convert", "trim", "resize", "speed", "merge", "studio"];
+
+function VideoTool({ tool, locale }: { tool: Tool; locale: Locale }) {
   const t = videoText[locale];
   const inputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -213,6 +264,7 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
   const stopTimerRef = useRef<number | null>(null);
   const playbackTokenRef = useRef(0);
   const [files, setFiles] = useState<File[]>([]);
+  const [mode, setMode] = useState<VideoMode>(videoModeBySlug[tool.slug] ?? "studio");
   const [urls, setUrls] = useState<string[]>([]);
   const [durations, setDurations] = useState<number[]>([]);
   const [clips, setClips] = useState<VideoClip[]>([]);
@@ -242,6 +294,10 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
   const [status, setStatus] = useState<"idle" | "processing" | "done" | "error">("idle");
   const [message, setMessage] = useState("");
   const selectedClip = clips.find((clip) => clip.id === selectedClipId);
+  const needsTimeline = mode === "merge" || mode === "trim" || mode === "studio";
+  const showTrimControls = mode === "trim" || mode === "merge" || mode === "studio";
+  const showResizeControls = mode === "resize" || mode === "compress" || mode === "studio";
+  const showSpeedControls = mode === "speed" || mode === "studio";
   const activeDuration = durations[activeIndex] ?? 0;
   const startSeconds = activeDuration ? (startPct / 100) * activeDuration : 0;
   const endSeconds = activeDuration ? Math.max(startSeconds + 0.05, (endPct / 100) * activeDuration) : 0;
@@ -269,6 +325,26 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
     setSelectedClipId(null);
     setStartPct(0);
     setEndPct(100);
+  }
+
+  function changeMode(nextMode: VideoMode) {
+    setMode(nextMode);
+    if (nextMode === "compress") {
+      setCompress(true);
+      setQuality(480);
+      setExportFormat("webm-vp9");
+    }
+    if (nextMode === "convert") {
+      setCompress(false);
+      setQuality(720);
+    }
+    if (nextMode === "resize") {
+      setQuality(1080);
+      setCrop("9:16");
+    }
+    if (nextMode === "speed" && speed === 1) {
+      setSpeed(1.25);
+    }
   }
 
   function addFileToTimeline(index: number) {
@@ -487,6 +563,19 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
 
   return (
     <div className="tool-workspace video-workspace">
+      <section className="video-mode-panel">
+        <div>
+          <h2>{t.modeLabel}</h2>
+          <p>{t.modeDescriptions[mode]}</p>
+        </div>
+        <div className="video-mode-grid">
+          {videoModes.map((item) => (
+            <button type="button" className={`small-action ${mode === item ? "active" : ""}`} onClick={() => changeMode(item)} key={item}>
+              {t.modes[item]}
+            </button>
+          ))}
+        </div>
+      </section>
       <input ref={inputRef} className="sr-only" type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.mov,.webm" multiple onChange={(event) => addFiles(event.target.files)} />
       <input ref={audioInputRef} className="sr-only" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a" onChange={(event) => setExternalAudioName(event.target.files?.[0]?.name ?? "")} />
       <button type="button" className="dropzone video-dropzone" onClick={() => inputRef.current?.click()}>
@@ -506,7 +595,7 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
                     <span>{file.name}</span>
                     <small>{formatDuration(durations[index] ?? 0)} - {formatFileSize(file.size)}</small>
                   </button>
-                  <button type="button" className="small-action" onClick={() => addFileToTimeline(index)}>{t.sendTimeline}</button>
+                  {needsTimeline && <button type="button" className="small-action" onClick={() => addFileToTimeline(index)}>{t.sendTimeline}</button>}
                 </div>
               ))}
             </div>
@@ -517,19 +606,19 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
             <div className={`video-preview-frame crop-${crop.replace(":", "-")}`}>
               <video ref={videoRef} src={urls[activeIndex]} controls playsInline preload="metadata" style={{ transform: `rotate(${rotation}deg) scale(${flipH ? -1 : 1}, ${flipV ? -1 : 1})` }} />
             </div>
-            <div className="video-preview-trim">
+            {showTrimControls && <div className="video-preview-trim">
               <strong>{t.previewTrim}</strong>
               <label className="audio-range-label"><span>{t.start}: {formatDuration(startSeconds)}</span><input type="range" min="0" max="99" value={startPct} onChange={(event) => updateSelection(Number(event.target.value), endPct)} /></label>
               <label className="audio-range-label"><span>{t.end}: {formatDuration(endSeconds)}</span><input type="range" min="1" max="100" value={endPct} onChange={(event) => updateSelection(startPct, Number(event.target.value))} /></label>
               <button type="button" className="button secondary" onClick={addSelectionToTimeline}>{t.trimAdd}</button>
-            </div>
+            </div>}
             <div className="video-playbar">
               <button type="button" className="small-action" onClick={playClip}>{t.playClip}</button>
               <button type="button" className="small-action" onClick={captureFrame}>{t.captureFrame}</button>
             </div>
           </section>
 
-          <section className="video-panel video-panel-wide">
+          {needsTimeline && <section className="video-panel video-panel-wide">
             <div className="audio-timeline-header">
               <h2>{t.timeline}</h2>
               {!!clips.length && (
@@ -562,9 +651,9 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
                 </article>
               )) : <p className="option-note">{t.noClips}</p>}
             </div>
-          </section>
+          </section>}
 
-          <section className="video-panel">
+          {needsTimeline && <section className="video-panel">
             <h2>{selectedClipId ? t.selectedClip : t.timeline}</h2>
             <p className="option-note">{t.timelineHint}</p>
             {selectedClip && (
@@ -574,24 +663,24 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
                 <button type="button" className="button secondary" onClick={splitSelectedClip}>{t.splitSelected}</button>
               </div>
             )}
-            <label className="audio-range-label"><span>{t.speed}: {speed.toFixed(2)}x</span><input type="range" min="0.5" max="2" step="0.05" value={speed} onChange={(event) => setSpeed(Number(event.target.value))} /></label>
             <label className="audio-range-label"><span>{t.volume}: {Math.round(volume * 100)}%</span><input type="range" min="0" max="1" step="0.05" value={volume} onChange={(event) => setVolume(Number(event.target.value))} /></label>
             <label className="audio-check"><input type="checkbox" checked={muted} onChange={(event) => setMuted(event.target.checked)} /> {t.mute}</label>
-          </section>
+          </section>}
 
           <section className="video-panel">
-            <h2>{locale === "en" ? "Transform" : "Transformar"}</h2>
-            <label className="field"><span>{t.crop}</span><select value={crop} onChange={(event) => setCrop(event.target.value)}><option>16:9</option><option>9:16</option><option>1:1</option><option>original</option></select></label>
-            <label className="field"><span>{t.quality}</span><select value={quality} onChange={(event) => setQuality(Number(event.target.value))}><option value={360}>360p</option><option value={480}>480p</option><option value={720}>720p</option><option value={1080}>1080p</option></select></label>
+            <h2>{mode === "compress" ? (locale === "en" ? "Compression" : "Compresion") : mode === "convert" ? (locale === "en" ? "Conversion" : "Conversion") : mode === "speed" ? t.speed : (locale === "en" ? "Transform" : "Transformar")}</h2>
+            {showResizeControls && <label className="field"><span>{t.crop}</span><select value={crop} onChange={(event) => setCrop(event.target.value)}><option>16:9</option><option>9:16</option><option>1:1</option><option>original</option></select></label>}
+            {(showResizeControls || mode === "convert") && <label className="field"><span>{t.quality}</span><select value={quality} onChange={(event) => setQuality(Number(event.target.value))}><option value={360}>360p</option><option value={480}>480p</option><option value={720}>720p</option><option value={1080}>1080p</option></select></label>}
             <label className="field"><span>{t.exportFormat}</span><select value={exportFormat} onChange={(event) => setExportFormat(event.target.value as VideoExportFormat)}><option value="webm-vp9">WebM VP9</option><option value="webm-vp8">WebM VP8</option><option value="mp4">MP4 H.264 si el navegador lo soporta</option></select></label>
-            <div className="segmented-wrap">
+            {showResizeControls && <div className="segmented-wrap">
               <button type="button" className="small-action" onClick={() => setRotation((current) => (current + 90) % 360)}>{t.rotate}</button>
               <button type="button" className={`small-action ${flipH ? "active" : ""}`} onClick={() => setFlipH((current) => !current)}>{t.flipH}</button>
               <button type="button" className={`small-action ${flipV ? "active" : ""}`} onClick={() => setFlipV((current) => !current)}>{t.flipV}</button>
-            </div>
+            </div>}
+            {showSpeedControls && <label className="audio-range-label"><span>{t.speed}: {speed.toFixed(2)}x</span><input type="range" min="0.5" max="2" step="0.05" value={speed} onChange={(event) => setSpeed(Number(event.target.value))} /></label>}
             <label className="audio-check"><input type="checkbox" checked={includeAudio} onChange={(event) => setIncludeAudio(event.target.checked)} /> {t.includeAudio}</label>
-            <label className="audio-check"><input type="checkbox" checked={compress} onChange={(event) => setCompress(event.target.checked)} /> {t.compress}</label>
-            <button type="button" className="small-action" onClick={() => audioInputRef.current?.click()}>{t.addAudio}</button>
+            {(mode === "compress" || mode === "studio") && <label className="audio-check"><input type="checkbox" checked={compress} onChange={(event) => setCompress(event.target.checked)} /> {t.compress}</label>}
+            {mode === "studio" && <button type="button" className="small-action" onClick={() => audioInputRef.current?.click()}>{t.addAudio}</button>}
             {externalAudioName && <p className="option-note">{externalAudioName}</p>}
             <p className="option-note">{t.audioNote}</p>
           </section>
@@ -599,8 +688,10 @@ function VideoTool({ locale }: { tool: Tool; locale: Locale }) {
           <section className="video-panel video-panel-wide">
             <h2>{t.output}</h2>
             <div className="video-export-actions">
-              <button type="button" className="button" onClick={() => exportVideo("selection")}>{t.exportSelection}</button>
-              <button type="button" className="button secondary" onClick={() => exportVideo("timeline")}>{t.exportTimeline}</button>
+              <button type="button" className="button" onClick={() => exportVideo(needsTimeline && clips.length ? "timeline" : "selection")}>
+                {needsTimeline && clips.length ? t.exportTimeline : t.exportSelection}
+              </button>
+              {needsTimeline && <button type="button" className="button secondary" onClick={() => exportVideo("selection")}>{t.exportSelection}</button>}
             </div>
             {message && <div className={`tool-status ${status}`}>{message}</div>}
             {resultUrl && (
