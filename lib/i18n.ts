@@ -301,22 +301,22 @@ const toolTranslations: Record<Locale, Record<string, Partial<Tool>>> = {
       title: "Compress video",
       h1: "Compress video online",
       group: "Compression",
-      description: "Reduce MP4, MOV or WebM video size by adjusting quality, resolution and compression in your browser.",
-      keywords: ["compress video", "compress mp4", "reduce video size", "video for whatsapp", "video for email"]
+      description: "Reduce MP4, MOV or WebM video size by manually choosing compression percentage, quality and resolution.",
+      keywords: ["compress video", "compress mp4", "reduce video size", "compression percentage", "video for whatsapp", "video for email"]
     },
     "convertidor-video": {
       title: "Video converter",
       h1: "Online video converter",
       group: "Conversion",
-      description: "Convert videos between browser-compatible formats, with WebM or MP4 output when supported.",
-      keywords: ["video converter", "convert video", "mp4 converter", "mov to mp4", "webm to mp4", "mp4 to webm"]
+      description: "Convert videos to browser-compatible formats: WebM VP9, WebM VP8, compatible WebM or MP4 when supported.",
+      keywords: ["video converter", "convert video", "mp4 converter", "webm converter", "webm to mp4", "mp4 to webm"]
     },
     "cortar-video": {
       title: "Cut video",
       h1: "Cut video online",
       group: "Editing",
-      description: "Trim the start and end of a video, split clips from the timeline and export only the selected part.",
-      keywords: ["cut video", "trim video", "split video", "crop video"]
+      description: "Trim the start and end of a video with clear Input/Output controls and export only the selected part.",
+      keywords: ["cut video", "trim video", "cut mp4", "extract video segment"]
     },
     "redimensionar-video": {
       title: "Resize video",

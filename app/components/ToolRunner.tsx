@@ -46,7 +46,7 @@ type VideoClip = {
   label: string;
 };
 
-type VideoExportFormat = "webm-vp9" | "webm-vp8" | "mp4";
+type VideoExportFormat = "webm-vp9" | "webm-vp8" | "webm" | "mp4";
 type VideoMode = "studio" | "compress" | "convert" | "trim" | "resize" | "speed" | "merge";
 
 const formatEuro = new Intl.NumberFormat("es-ES", {
@@ -121,9 +121,9 @@ const videoText = {
     },
     modeDescriptions: {
       studio: "Usa todos los controles disponibles para editar, cortar, unir, redimensionar y exportar.",
-      compress: "Reduce peso bajando resolucion, bitrate y fps. Ideal para email, WhatsApp o subir archivos mas rapido.",
-      convert: "Elige formato de salida WebM o MP4 compatible y exporta el video desde el navegador.",
-      trim: "Marca Input/Output en la preview o divide clips desde el timeline.",
+      compress: "Elige manualmente cuanto quieres comprimir y reduce peso bajando resolucion, bitrate y fps.",
+      convert: "Elige formato de salida WebM VP9, WebM VP8, WebM compatible o MP4 si el navegador lo soporta.",
+      trim: "Marca Input y Output en la preview y exporta solo ese recorte. Sin timeline innecesario.",
       resize: "Cambia ratio y resolucion para redes: 16:9, 9:16, 1:1, 720p o 1080p.",
       speed: "Acelera o ralentiza el video entre 0.5x y 2x.",
       merge: "Sube varios videos, envialos al timeline, reordenalos y exporta el montaje completo."
@@ -150,6 +150,7 @@ const videoText = {
     crop: "Crop",
     quality: "Calidad",
     exportFormat: "Formato",
+    compressionPercent: "Comprimir",
     includeAudio: "Incluir audio original",
     compress: "Compresion automatica",
     rotate: "Rotar",
@@ -163,7 +164,7 @@ const videoText = {
     splitClip: "Dividir",
     splitSelected: "Dividir clip seleccionado",
     timelineHint: "Click en un clip para poner el corte. Ajusta Input/Output del clip seleccionado y divide desde el cabezal.",
-    exportSelection: "Exportar seleccion",
+    exportSelection: "Exportar recorte",
     exportTimeline: "Exportar timeline",
     captureFrame: "Capturar frame",
     download: "Descargar",
@@ -188,9 +189,9 @@ const videoText = {
     },
     modeDescriptions: {
       studio: "Use all available controls to edit, cut, merge, resize and export.",
-      compress: "Reduce size by lowering resolution, bitrate and fps. Good for email, WhatsApp or faster uploads.",
-      convert: "Choose WebM or compatible MP4 output and export the video in your browser.",
-      trim: "Set Input/Output in the preview or split clips from the timeline.",
+      compress: "Choose exactly how much to compress and reduce size by lowering resolution, bitrate and fps.",
+      convert: "Choose WebM VP9, WebM VP8, compatible WebM or MP4 when the browser supports it.",
+      trim: "Set Input and Output in the preview and export only that cut. No unnecessary timeline.",
       resize: "Change ratio and resolution for social platforms: 16:9, 9:16, 1:1, 720p or 1080p.",
       speed: "Speed up or slow down the video between 0.5x and 2x.",
       merge: "Upload several videos, send them to the timeline, reorder them and export the full edit."
@@ -217,6 +218,7 @@ const videoText = {
     crop: "Crop",
     quality: "Quality",
     exportFormat: "Format",
+    compressionPercent: "Compress",
     includeAudio: "Include original audio",
     compress: "Auto compression",
     rotate: "Rotate",
@@ -230,7 +232,7 @@ const videoText = {
     splitClip: "Split",
     splitSelected: "Split selected clip",
     timelineHint: "Click a clip to place the cut. Adjust Input/Output on the selected clip and split from the playhead.",
-    exportSelection: "Export selection",
+    exportSelection: "Export cut",
     exportTimeline: "Export timeline",
     captureFrame: "Capture frame",
     download: "Download",
@@ -285,6 +287,7 @@ function VideoTool({ tool, locale }: { tool: Tool; locale: Locale }) {
   const [exportFormat, setExportFormat] = useState<VideoExportFormat>("webm-vp9");
   const [includeAudio, setIncludeAudio] = useState(true);
   const [compress, setCompress] = useState(true);
+  const [compressionPercent, setCompressionPercent] = useState(55);
   const [rotation, setRotation] = useState(0);
   const [flipH, setFlipH] = useState(false);
   const [flipV, setFlipV] = useState(false);
@@ -294,8 +297,8 @@ function VideoTool({ tool, locale }: { tool: Tool; locale: Locale }) {
   const [status, setStatus] = useState<"idle" | "processing" | "done" | "error">("idle");
   const [message, setMessage] = useState("");
   const selectedClip = clips.find((clip) => clip.id === selectedClipId);
-  const needsTimeline = mode === "merge" || mode === "trim" || mode === "studio";
-  const showTrimControls = mode === "trim" || mode === "merge" || mode === "studio";
+  const needsTimeline = mode === "merge" || mode === "studio";
+  const showTrimControls = mode === "trim" || mode === "studio";
   const showResizeControls = mode === "resize" || mode === "compress" || mode === "studio";
   const showSpeedControls = mode === "speed" || mode === "studio";
   const activeDuration = durations[activeIndex] ?? 0;
@@ -331,6 +334,7 @@ function VideoTool({ tool, locale }: { tool: Tool; locale: Locale }) {
     setMode(nextMode);
     if (nextMode === "compress") {
       setCompress(true);
+      setCompressionPercent(60);
       setQuality(480);
       setExportFormat("webm-vp9");
     }
@@ -549,7 +553,7 @@ function VideoTool({ tool, locale }: { tool: Tool; locale: Locale }) {
         target === "timeline" && clips.length
           ? clips
           : [{ id: "selection", fileIndex: activeIndex, start: startSeconds, end: endSeconds, label: files[activeIndex]?.name ?? "video" }];
-      const rendered = await renderVideoClips(renderClips, files, urls, crop, quality, rotation, flipH, flipV, speed, compress, exportFormat, includeAudio);
+      const rendered = await renderVideoClips(renderClips, files, urls, crop, quality, rotation, flipH, flipV, speed, compress, compressionPercent, exportFormat, includeAudio);
       const url = URL.createObjectURL(rendered.blob);
       setResultName(`${target === "timeline" ? "timeline" : "seleccion"}.${getVideoExtension(rendered.mimeType)}`);
       setResultUrl(url);
@@ -671,13 +675,14 @@ function VideoTool({ tool, locale }: { tool: Tool; locale: Locale }) {
             <h2>{mode === "compress" ? (locale === "en" ? "Compression" : "Compresion") : mode === "convert" ? (locale === "en" ? "Conversion" : "Conversion") : mode === "speed" ? t.speed : (locale === "en" ? "Transform" : "Transformar")}</h2>
             {showResizeControls && <label className="field"><span>{t.crop}</span><select value={crop} onChange={(event) => setCrop(event.target.value)}><option>16:9</option><option>9:16</option><option>1:1</option><option>original</option></select></label>}
             {(showResizeControls || mode === "convert") && <label className="field"><span>{t.quality}</span><select value={quality} onChange={(event) => setQuality(Number(event.target.value))}><option value={360}>360p</option><option value={480}>480p</option><option value={720}>720p</option><option value={1080}>1080p</option></select></label>}
-            <label className="field"><span>{t.exportFormat}</span><select value={exportFormat} onChange={(event) => setExportFormat(event.target.value as VideoExportFormat)}><option value="webm-vp9">WebM VP9</option><option value="webm-vp8">WebM VP8</option><option value="mp4">MP4 H.264 si el navegador lo soporta</option></select></label>
+            <label className="field"><span>{t.exportFormat}</span><select value={exportFormat} onChange={(event) => setExportFormat(event.target.value as VideoExportFormat)}><option value="webm-vp9">WebM VP9</option><option value="webm-vp8">WebM VP8</option><option value="webm">WebM compatible</option><option value="mp4">MP4 H.264 si el navegador lo soporta</option></select></label>
             {showResizeControls && <div className="segmented-wrap">
               <button type="button" className="small-action" onClick={() => setRotation((current) => (current + 90) % 360)}>{t.rotate}</button>
               <button type="button" className={`small-action ${flipH ? "active" : ""}`} onClick={() => setFlipH((current) => !current)}>{t.flipH}</button>
               <button type="button" className={`small-action ${flipV ? "active" : ""}`} onClick={() => setFlipV((current) => !current)}>{t.flipV}</button>
             </div>}
             {showSpeedControls && <label className="audio-range-label"><span>{t.speed}: {speed.toFixed(2)}x</span><input type="range" min="0.5" max="2" step="0.05" value={speed} onChange={(event) => setSpeed(Number(event.target.value))} /></label>}
+            {mode === "compress" && <label className="audio-range-label"><span>{t.compressionPercent}: {compressionPercent}%</span><input type="range" min="10" max="90" step="5" value={compressionPercent} onChange={(event) => { setCompressionPercent(Number(event.target.value)); setCompress(true); }} /></label>}
             <label className="audio-check"><input type="checkbox" checked={includeAudio} onChange={(event) => setIncludeAudio(event.target.checked)} /> {t.includeAudio}</label>
             {(mode === "compress" || mode === "studio") && <label className="audio-check"><input type="checkbox" checked={compress} onChange={(event) => setCompress(event.target.checked)} /> {t.compress}</label>}
             {mode === "studio" && <button type="button" className="small-action" onClick={() => audioInputRef.current?.click()}>{t.addAudio}</button>}
@@ -729,6 +734,7 @@ async function renderVideoClips(
   flipV: boolean,
   speed: number,
   compress: boolean,
+  compressionPercent: number,
   exportFormat: VideoExportFormat,
   includeAudio: boolean
 ) {
@@ -741,7 +747,11 @@ async function renderVideoClips(
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Canvas not available");
 
-  const stream = canvas.captureStream(compress ? 24 : 30);
+  const compressionRatio = Math.max(0.1, Math.min(0.9, compressionPercent / 100));
+  const qualityRatio = Math.max(0.1, 1 - compressionRatio);
+  const frameRate = compress ? Math.max(12, Math.round(30 - compressionRatio * 14)) : 30;
+  const videoBitsPerSecond = compress ? Math.max(350_000, Math.round(4_500_000 * qualityRatio)) : 4_500_000;
+  const stream = canvas.captureStream(frameRate);
   const audioContext =
     includeAudio && typeof AudioContext !== "undefined"
       ? new AudioContext()
@@ -755,7 +765,7 @@ async function renderVideoClips(
 
   const mimeType = getVideoMimeType(exportFormat);
   const chunks: BlobPart[] = [];
-  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: compress ? 1_800_000 : 4_500_000 });
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond });
   recorder.ondataavailable = (event) => {
     if (event.data.size) chunks.push(event.data);
   };
@@ -831,7 +841,9 @@ function getVideoMimeType(format: VideoExportFormat) {
       ? ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4"]
       : format === "webm-vp8"
         ? ["video/webm;codecs=vp8,opus", "video/webm;codecs=vp8", "video/webm"]
-        : ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp9", "video/webm"];
+        : format === "webm"
+          ? ["video/webm;codecs=vp8,opus", "video/webm;codecs=vp9,opus", "video/webm"]
+          : ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp9", "video/webm"];
   return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? "video/webm";
 }
 

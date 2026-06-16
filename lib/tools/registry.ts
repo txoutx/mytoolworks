@@ -439,8 +439,8 @@ export const tools: Tool[] = [
     title: "Comprimir video",
     h1: "Comprimir video online",
     group: "Compresion",
-    description: "Reduce el tamano de videos MP4, MOV o WebM ajustando calidad, resolucion y compresion desde el navegador.",
-    keywords: ["comprimir video", "compress video", "comprimir mp4", "reducir video", "video para whatsapp", "video para email"]
+    description: "Reduce el tamano de videos MP4, MOV o WebM eligiendo manualmente el porcentaje de compresion, calidad y resolucion.",
+    keywords: ["comprimir video", "compress video", "comprimir mp4", "reducir video", "comprimir video porcentaje", "video para whatsapp", "video para email"]
   },
   {
     ...videoBase,
@@ -449,8 +449,8 @@ export const tools: Tool[] = [
     title: "Convertidor de video",
     h1: "Convertidor de video online",
     group: "Conversion",
-    description: "Convierte videos entre formatos compatibles del navegador, con salida WebM o MP4 cuando el navegador lo soporte.",
-    keywords: ["convertidor video", "convertir video", "mp4 converter", "mov a mp4", "webm a mp4", "mp4 a webm"]
+    description: "Convierte videos a formatos compatibles del navegador: WebM VP9, WebM VP8, WebM compatible o MP4 cuando el navegador lo soporte.",
+    keywords: ["convertidor video", "convertir video", "mp4 converter", "webm converter", "webm a mp4", "mp4 a webm"]
   },
   {
     ...videoBase,
@@ -459,8 +459,8 @@ export const tools: Tool[] = [
     title: "Cortar video",
     h1: "Cortar video online",
     group: "Edicion",
-    description: "Recorta el inicio y final de un video, divide clips desde el timeline y exporta solo la parte seleccionada.",
-    keywords: ["cortar video", "trim video", "recortar video", "dividir video", "split video"]
+    description: "Recorta el inicio y final de un video con controles Input/Output claros y exporta solo la parte seleccionada.",
+    keywords: ["cortar video", "trim video", "recortar video", "cortar mp4", "extraer parte video"]
   },
   {
     ...videoBase,
