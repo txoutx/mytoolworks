@@ -31,6 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: tool.title,
     description: tool.description,
     keywords: tool.keywords,
+    robots: tool.status === "Disponible" ? undefined : { index: false, follow: false },
     alternates: {
       canonical: tool.route,
       languages: {

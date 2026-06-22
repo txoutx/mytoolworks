@@ -29,7 +29,8 @@ export function articleSchema(article: SeoArticle, path: string) {
     inLanguage: article.locale,
     author: {
       "@type": "Organization",
-      name: "MyToolWorks"
+      name: "MyToolWorks",
+      url: `${baseUrl}/sobre-mytoolworks`
     },
     publisher: {
       "@type": "Organization",

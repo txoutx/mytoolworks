@@ -37,6 +37,7 @@ export function Footer({ locale = "es" }: { locale?: Locale }) {
           <Link href={withLocalePath("/cookies", locale)}>{t.cookies}</Link>
           <Link href={withLocalePath("/terminos", locale)}>{t.terms}</Link>
           <Link href={withLocalePath("/contacto", locale)}>{t.contact}</Link>
+          <Link href={withLocalePath("/sobre-mytoolworks", locale)}>{locale === "en" ? "About" : "Sobre MyToolWorks"}</Link>
           <Link href={withLocalePath("/blog", locale)}>Blog</Link>
           <Link href={locale === "en" ? "/en/use-cases" : "/casos"}>{locale === "en" ? "Use cases" : "Casos de uso"}</Link>
         </nav>
@@ -46,9 +47,7 @@ export function Footer({ locale = "es" }: { locale?: Locale }) {
 }
 
 export function AdSlot({ label = "Espacio reservado para anuncio", locale = "es" }: { label?: string; locale?: Locale }) {
-  return (
-    <aside className="ad-slot" aria-label={label}>
-      <span>{ui[locale].ad}</span>
-    </aside>
-  );
+  void label;
+  void locale;
+  return null;
 }

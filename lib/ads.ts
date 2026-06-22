@@ -29,3 +29,7 @@ const adPlans: Record<AdProfile, AdSlotConfig[]> = {
 export function getAdPlan(profile: AdProfile) {
   return adPlans[profile];
 }
+
+export function isAdsEligiblePath(pathname: string) {
+  return /^\/blog\/[^/]+$/.test(pathname) || /^\/en\/blog\/[^/]+$/.test(pathname);
+}
