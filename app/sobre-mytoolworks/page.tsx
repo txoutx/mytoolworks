@@ -3,7 +3,7 @@ import { LegalPage } from "../components/LegalPage";
 
 export const metadata: Metadata = {
   title: "Sobre MyToolWorks",
-  description: "Conoce como se crean, prueban y mantienen las herramientas y guias de MyToolWorks.",
+  description: "Conoce como se crean, prueban y mantienen las herramientas de MyToolWorks.",
   alternates: {
     canonical: "/sobre-mytoolworks",
     languages: {
@@ -33,11 +33,10 @@ export default function AboutPage() {
         del navegador. Si una conversion necesita un servidor especializado, la pagina debe indicarlo y no presentar una
         simulacion como si fuera un resultado terminado.
       </p>
-      <h2>Contenido editorial original</h2>
+      <h2>Contenido de cada herramienta</h2>
       <p>
-        Las guias y casos de uso se redactan para explicar tareas concretas que tambien pueden resolverse con las
-        herramientas de la web. El contenido incluye pasos, recomendaciones, limites tecnicos, preguntas frecuentes y
-        enlaces directos a la utilidad adecuada. No se publican paginas generadas solo para repetir palabras clave.
+        Cada herramienta incluye una explicacion breve de lo que hace, pasos de uso, limites tecnicos y preguntas
+        frecuentes cuando aportan valor. No se publican paginas separadas solo para repetir palabras clave.
       </p>
       <h2>Privacidad y procesamiento</h2>
       <p>
@@ -48,8 +47,8 @@ export default function AboutPage() {
       <h2>Publicidad y sostenibilidad</h2>
       <p>
         La publicidad ayuda a mantener el proyecto, pero no debe sustituir al contenido ni interferir con la herramienta.
-        MyToolWorks limita la carga publicitaria a paginas editoriales con contenido suficiente y respeta las preferencias
-        de consentimiento configuradas por el usuario.
+        MyToolWorks no carga anuncios en pantallas de edicion o paginas sin suficiente contenido propio y respeta las
+        preferencias de consentimiento configuradas por el usuario.
       </p>
       <h2>Contacto</h2>
       <p>

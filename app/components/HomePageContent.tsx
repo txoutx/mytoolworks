@@ -2,23 +2,10 @@ import Link from "next/link";
 import { ArrowLeftRight, FileImage, FileText, Film, Music2 } from "lucide-react";
 import type { Locale } from "../../lib/i18n";
 import { ui, withLocalePath } from "../../lib/i18n";
-import { getArticles } from "../../lib/seo/blog";
-import { getUseCases } from "../../lib/seo/useCases";
 import { AdSlot, Footer, Header } from "./SiteChrome";
-import { SeoCardGrid } from "./SeoPages";
 
 export function HomePageContent({ locale }: { locale: Locale }) {
   const t = ui[locale];
-  const articleLinks = getArticles(locale).slice(0, 3).map((article) => ({
-    title: article.title,
-    href: withLocalePath(`/blog/${article.slug}`, locale),
-    description: article.description
-  }));
-  const caseLinks = getUseCases(locale).slice(0, 3).map((page) => ({
-    title: page.title,
-    href: locale === "en" ? `/en/use-cases/${page.slug}` : `/casos/${page.slug}`,
-    description: page.description
-  }));
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -128,23 +115,6 @@ export function HomePageContent({ locale }: { locale: Locale }) {
                 <footer>{t.openConverter}</footer>
               </Link>
             </div>
-          </div>
-        </section>
-
-        <section className="section seo-home-section">
-          <div className="container">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">{locale === "en" ? "Guides" : "Guias"}</p>
-                <h2>{locale === "en" ? "Useful workflows" : "Flujos utiles"}</h2>
-              </div>
-              <p>
-                {locale === "en"
-                  ? "How-to guides and search-focused use cases connected to each tool."
-                  : "Guias y casos de uso conectados con cada herramienta para resolver busquedas concretas."}
-              </p>
-            </div>
-            <SeoCardGrid links={[...articleLinks, ...caseLinks]} />
           </div>
         </section>
 

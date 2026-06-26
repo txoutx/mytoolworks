@@ -31,5 +31,6 @@ export function getAdPlan(profile: AdProfile) {
 }
 
 export function isAdsEligiblePath(pathname: string) {
-  return /^\/blog\/[^/]+$/.test(pathname) || /^\/en\/blog\/[^/]+$/.test(pathname);
+  void pathname;
+  return false;
 }

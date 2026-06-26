@@ -3,7 +3,7 @@ import { LegalPage } from "../../components/LegalPage";
 
 export const metadata: Metadata = {
   title: "About MyToolWorks",
-  description: "Learn how MyToolWorks tools and guides are created, tested and maintained.",
+  description: "Learn how MyToolWorks tools are created, tested and maintained.",
   alternates: {
     canonical: "/en/sobre-mytoolworks",
     languages: {
@@ -33,16 +33,15 @@ export default function EnglishAboutPage() {
         downloads and real browser compatibility are reviewed before a feature is presented as available. Server-only
         conversions must be identified clearly instead of being shown as completed browser operations.
       </p>
-      <h2>Original editorial content</h2>
+      <h2>Tool page content</h2>
       <p>
-        Guides and use cases explain practical jobs that can be completed with the site tools. They include steps,
-        recommendations, technical limits, frequently asked questions and links to the relevant utility. Pages are not
-        published only to repeat keywords.
+        Each tool includes a short explanation of what it does, usage steps, technical limits and useful frequently asked
+        questions when they help the user. Separate pages are not published only to repeat keywords.
       </p>
       <h2>Privacy and advertising</h2>
       <p>
-        Files are processed locally whenever practical. Advertising supports maintenance, but it is limited to editorial
-        pages with substantial content and follows the consent choices made by the user.
+        Files are processed locally whenever practical. Advertising supports maintenance, but it is not loaded on editing
+        screens or pages without enough first-party content, and it follows the consent choices made by the user.
       </p>
       <h2>Contact</h2>
       <p>

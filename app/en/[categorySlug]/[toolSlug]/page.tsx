@@ -4,7 +4,6 @@ import { AdSlot, Footer, Header } from "../../../components/SiteChrome";
 import { ToolRunner } from "../../../components/ToolRunner";
 import { getCategory, getRelatedTools, getTool, tools } from "../../../data/tools";
 import { localizeCategory, localizeTool, ui, withLocalePath } from "../../../../lib/i18n";
-import { getSeoLinksForTool } from "../../../../lib/seo/internalLinks";
 import { faqSchema } from "../../../../lib/seo/schema";
 
 type PageProps = {
@@ -54,7 +53,6 @@ export default async function EnglishToolPage({ params }: PageProps) {
   const sourceCategory = getCategory(tool.categorySlug);
   const category = sourceCategory ? localizeCategory(sourceCategory, "en") : undefined;
   const related = getRelatedTools(tool).map((item) => localizeTool(item, "en"));
-  const seoLinks = getSeoLinksForTool(tool.slug, "en");
   const t = ui.en;
   const faqs = [
     {
@@ -148,26 +146,6 @@ export default async function EnglishToolPage({ params }: PageProps) {
                 </a>
               ))}
             </div>
-            {seoLinks.articles.length > 0 && (
-              <div className="related-list">
-                <h2>Guides</h2>
-                {seoLinks.articles.map((item) => (
-                  <a href={item.href} key={item.href}>
-                    {item.title}
-                  </a>
-                ))}
-              </div>
-            )}
-            {seoLinks.cases.length > 0 && (
-              <div className="related-list">
-                <h2>Use cases</h2>
-                {seoLinks.cases.map((item) => (
-                  <a href={item.href} key={item.href}>
-                    {item.title}
-                  </a>
-                ))}
-              </div>
-            )}
           </aside>
         </div>
       </main>
