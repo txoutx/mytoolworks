@@ -14,7 +14,7 @@ type PageProps = {
 };
 
 export function generateStaticParams() {
-  return tools.map((tool) => ({
+  return tools.filter((tool) => tool.status === "Disponible").map((tool) => ({
     categorySlug: tool.categorySlug,
     toolSlug: tool.slug
   }));
@@ -51,7 +51,7 @@ export default async function ToolPage({ params }: PageProps) {
   const { categorySlug, toolSlug } = await params;
   const tool = getTool(categorySlug, toolSlug);
 
-  if (!tool) notFound();
+  if (!tool || tool.status !== "Disponible") notFound();
 
   return <ToolPageContent tool={tool} locale="es" />;
 }

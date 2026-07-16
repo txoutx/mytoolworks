@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Script from "next/script";
-import { usePathname } from "next/navigation";
-import { isAdsEligiblePath } from "../../lib/ads";
 
 declare global {
   interface Window {
@@ -19,15 +17,12 @@ declare global {
 }
 
 export function ThirdPartyScripts() {
-  const pathname = usePathname();
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
-  const [adsEnabled, setAdsEnabled] = useState(false);
 
   useEffect(() => {
     function syncConsent() {
       const consent = window.Cookiebot?.consent;
       setAnalyticsEnabled(Boolean(consent?.statistics || consent?.marketing));
-      setAdsEnabled(Boolean(consent?.marketing) && isAdsEligiblePath(pathname));
     }
 
     syncConsent();
@@ -40,7 +35,7 @@ export function ThirdPartyScripts() {
       window.removeEventListener("CookiebotOnAccept", syncConsent);
       window.removeEventListener("CookiebotOnDecline", syncConsent);
     };
-  }, [pathname]);
+  }, []);
 
   return (
     <>
@@ -60,13 +55,6 @@ gtag('js', new Date());
 gtag('config', 'G-4ZTWW5XPZ1');`}
       </Script>
         </>
-      )}
-      {adsEnabled && (
-      <Script
-        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5516465526702669"
-        crossOrigin="anonymous"
-        strategy="lazyOnload"
-      />
       )}
     </>
   );

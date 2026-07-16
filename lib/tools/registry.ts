@@ -510,12 +510,12 @@ export function getToolByLegacySlug(slug: string) {
 }
 
 export function getToolsByCategory(slug: string) {
-  return tools.filter((tool) => tool.categorySlug === slug);
+  return tools.filter((tool) => tool.categorySlug === slug && tool.status === "Disponible");
 }
 
 export function getRelatedTools(tool: Tool, limit = 6) {
   return tools
-    .filter((item) => item.route !== tool.route)
+    .filter((item) => item.route !== tool.route && item.status === "Disponible")
     .sort((left, right) => Number(right.categorySlug === tool.categorySlug) - Number(left.categorySlug === tool.categorySlug))
     .slice(0, limit);
 }

@@ -11,7 +11,7 @@ type PageProps = {
 };
 
 export function generateStaticParams() {
-  return tools.map((tool) => ({
+  return tools.filter((tool) => tool.status === "Disponible").map((tool) => ({
     categorySlug: tool.categorySlug,
     toolSlug: tool.slug
   }));
@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function EnglishToolPage({ params }: PageProps) {
   const { categorySlug, toolSlug } = await params;
   const tool = getTool(categorySlug, toolSlug);
-  if (!tool) notFound();
+  if (!tool || tool.status !== "Disponible") notFound();
 
   const localizedTool = localizeTool(tool, "en");
   const sourceCategory = getCategory(tool.categorySlug);
